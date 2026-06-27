@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isChromiumBrowser } from './installAppHelp'
 
 function isStandaloneDisplay(): boolean {
   if (typeof window === 'undefined') return false
@@ -50,5 +51,17 @@ export function useInstallPrompt() {
     return false
   }, [])
 
-  return { canInstall, isInstalled, promptInstall }
+  /** Chrome/Edge — View menu when not already installed. */
+  const showInstallInMenu = !isInstalled && isChromiumBrowser()
+
+  /** Safari, Firefox, etc. — subtle footer hint. */
+  const showInstallInFooter = !isInstalled && !isChromiumBrowser()
+
+  return {
+    canInstall,
+    isInstalled,
+    promptInstall,
+    showInstallInMenu,
+    showInstallInFooter,
+  }
 }

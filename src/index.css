@@ -730,6 +730,24 @@ input:focus-visible,
   white-space: nowrap;
 }
 
+.install-dialog__steps {
+  margin: 0 0 16px;
+  padding-left: 1.25rem;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.install-dialog__steps li + li {
+  margin-top: 8px;
+}
+
+.install-dialog__note {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 .compare-diff-line {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
@@ -889,6 +907,29 @@ body.is-split-resizing {
 
 .status-bar__credit {
   margin-left: auto;
+}
+
+.status-bar__install {
+  margin-left: auto;
+  padding: 0 10px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.65;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.status-bar__install:hover {
+  opacity: 1;
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.status-bar__install + .status-bar__credit {
+  margin-left: 12px;
 }
 
 .made-in-nyc {

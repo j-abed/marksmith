@@ -8,9 +8,7 @@ import './styles/print.css'
 import { App } from './app/App.tsx'
 import { AppProvider } from './app/AppProvider.tsx'
 
-if (import.meta.env.PROD) {
-  registerSW({ immediate: true })
-}
+registerSW({ immediate: true })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

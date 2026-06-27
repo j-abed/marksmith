@@ -1,4 +1,8 @@
+import { useState } from 'react'
 import type { SaveStatus } from '../app/appState'
+import { getInstallFooterHint } from '../app/installAppHelp'
+import { useInstallPrompt } from '../app/useInstallPrompt'
+import { InstallAppDialog } from './InstallAppDialog'
 import { MadeInNyc } from './MadeInNyc'
 
 type StatusBarProps = {
@@ -27,6 +31,9 @@ export function StatusBar({
   wordCount,
   headingCount,
 }: StatusBarProps) {
+  const { showInstallInFooter } = useInstallPrompt()
+  const [installOpen, setInstallOpen] = useState(false)
+
   return (
     <footer className="status-bar">
       <span
@@ -38,7 +45,18 @@ export function StatusBar({
       </span>
       <span className="status-bar__stat">{wordCount} words</span>
       <span className="status-bar__stat">{headingCount} headings</span>
+      {showInstallInFooter && (
+        <button
+          type="button"
+          className="status-bar__install"
+          onClick={() => setInstallOpen(true)}
+          title="How to install Marksmith as an app"
+        >
+          {getInstallFooterHint(import.meta.env.PROD)}
+        </button>
+      )}
       <MadeInNyc className="status-bar__credit" />
+      <InstallAppDialog open={installOpen} onClose={() => setInstallOpen(false)} />
     </footer>
   )
 }

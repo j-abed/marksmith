@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import type { EditorView } from '@codemirror/view'
 import { useApp } from '../app/AppProvider'
 import { useInstallPrompt } from '../app/useInstallPrompt'
+import { InstallAppDialog } from './InstallAppDialog'
 import { EditMenu } from './EditMenu'
 import { ExportMenu } from './ExportMenu'
 import { FileMenu } from './FileMenu'
@@ -31,8 +32,9 @@ export function TopBar({
 }: TopBarProps) {
   const { state, setTitle, setMode, toggleTheme, toggleZenMode, notice, clearNotice, showNotice } =
     useApp()
-  const { canInstall, promptInstall } = useInstallPrompt()
+  const { canInstall, promptInstall, showInstallInMenu } = useInstallPrompt()
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
+  const [installOpen, setInstallOpen] = useState(false)
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showFeedback = useCallback((message: string) => {
@@ -42,12 +44,22 @@ export function TopBar({
   }, [])
 
   const handleInstallApp = useCallback(() => {
-    void promptInstall().then((accepted) => {
-      if (accepted) {
-        showNotice('Marksmith installed — launch from your dock or home screen')
-      }
-    })
-  }, [promptInstall, showNotice])
+    if (canInstall) {
+      void promptInstall().then((accepted) => {
+        if (accepted) {
+          showNotice('Marksmith installed — launch from your dock or home screen')
+        }
+      })
+      return
+    }
+    if (import.meta.env.PROD) {
+      showNotice(
+        'Use the install icon in the address bar, or open the browser menu (⋮) → Install Marksmith…',
+      )
+      return
+    }
+    setInstallOpen(true)
+  }, [canInstall, promptInstall, showNotice])
 
   useEffect(() => {
     if (notice) {
@@ -92,7 +104,7 @@ export function TopBar({
             outlineOpen={outlineOpen}
             onToggleOutline={onToggleOutline}
             onOpenShortcuts={onOpenShortcuts}
-            canInstallApp={canInstall}
+            canInstallApp={showInstallInMenu}
             onInstallApp={handleInstallApp}
           />
           <ModeMenu mode={state.mode} onChange={setMode} />
@@ -121,6 +133,7 @@ export function TopBar({
           {copyFeedback}
         </span>
       )}
+      <InstallAppDialog open={installOpen} onClose={() => setInstallOpen(false)} />
     </header>
   )
 }
