@@ -44,10 +44,18 @@ export function saveRecentDocuments(entries: RecentDocument[]): void {
 
 function isSameRecent(
   entry: RecentDocument,
-  input: { title: string; markdown?: string; sourceName?: string },
+  input: {
+    title: string
+    markdown?: string
+    sourceName?: string
+    documentId?: string
+  },
 ): boolean {
   if (input.sourceName || entry.sourceName) {
     return input.sourceName === entry.sourceName
+  }
+  if (input.documentId) {
+    return entry.id === input.documentId
   }
   return entry.title === input.title
 }
@@ -56,6 +64,7 @@ export function addRecentDocument(input: {
   title: string
   markdown: string
   sourceName?: string
+  documentId?: string
   importedFromHtml?: boolean
   mode?: string
 }): RecentDocument[] {
@@ -67,7 +76,7 @@ export function addRecentDocument(input: {
   const mode = input.mode ?? prior?.mode
 
   const nextEntry: RecentDocument = {
-    id: prior?.id ?? crypto.randomUUID(),
+    id: input.documentId ?? prior?.id ?? crypto.randomUUID(),
     title,
     sourceName: input.sourceName,
     markdown: input.markdown,

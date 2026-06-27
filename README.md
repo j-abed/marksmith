@@ -29,7 +29,7 @@ Open **http://127.0.0.1:5173** in your browser.
 
 ### Install as an app
 
-To keep Marksmith in your dock or home screen (without running `npm run dev` every time):
+**Browser (PWA)** — dock or home screen without `npm run dev` every time:
 
 ```bash
 npm run build
@@ -38,7 +38,14 @@ npm run preview
 
 Open **http://127.0.0.1:4173**, then **View → Install app…** (or your browser’s install prompt). The app works offline after the first load.
 
-A full **native** desktop app (double-click `.md` files, system file associations) would need a thin wrapper such as Tauri — tracked in [docs/TODO.md](./docs/TODO.md).
+**Native desktop (Tauri)** — Finder **Open With**, double-click file associations, and native save dialogs. Requires [Rust](https://rustup.rs/); full setup in [docs/TAURI.md](./docs/TAURI.md).
+
+```bash
+npm run tauri:dev      # development
+npm run tauri:build    # release .app / .dmg in src-tauri/target/release/bundle/
+```
+
+Registered types: `.md`, `.markdown`, `.txt`, `.html`, `.htm`. Untitled drafts autosave to **File → Recent**.
 
 ### Other commands
 
@@ -52,6 +59,8 @@ A full **native** desktop app (double-click `.md` files, system file association
 | `npm run test:e2e` | End-to-end tests (Playwright) |
 | `npm run test:all` | Unit + e2e |
 | `npm run capture:showcase` | Regenerate landing-page screenshots |
+| `npm run tauri:dev` | Native desktop dev (Vite + Tauri window; requires Rust) |
+| `npm run tauri:build` | Production desktop bundle (`.app` / `.dmg` on macOS) |
 
 ### Preview the GitHub Pages site locally
 
@@ -78,10 +87,12 @@ npx serve docs
 - Resizable split/compare panes, scroll sync, outline sidebar, zen mode
 - Light and dark themes
 - **Installable PWA** — add to dock/home screen from a production build
+- **Native desktop (Tauri)** — `.md` file associations, Open With while running, native open/save dialogs; same editor as the web app
 
 ## Docs
 
 - [Architecture & design notes](./docs/architecture.md)
+- [Desktop app (Tauri)](./docs/TAURI.md)
 - [TODO / roadmap](./docs/TODO.md)
 - [Publishing guide](./docs/PUBLISHING.md)
 

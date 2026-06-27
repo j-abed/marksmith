@@ -5,35 +5,30 @@ import { useInstallPrompt } from '../app/useInstallPrompt'
 import { InstallAppDialog } from './InstallAppDialog'
 import { BuyMeCoffeeLink } from './BuyMeCoffeeLink'
 import { MadeInNyc } from './MadeInNyc'
+import { formatSaveStatusLabel } from './saveStatusLabel'
 
 type StatusBarProps = {
   saveStatus: SaveStatus
+  linkedToDisk: boolean
+  linkedFileName?: string | null
   wordCount: number
   headingCount: number
 }
 
-function saveLabel(status: SaveStatus): string {
-  switch (status) {
-    case 'saved':
-      return 'Saved'
-    case 'saving':
-      return 'Saving…'
-    case 'unsaved':
-      return 'Unsaved'
-    default: {
-      const _exhaustive: never = status
-      return _exhaustive
-    }
-  }
-}
-
 export function StatusBar({
   saveStatus,
+  linkedToDisk,
+  linkedFileName,
   wordCount,
   headingCount,
 }: StatusBarProps) {
   const { showInstallInFooter } = useInstallPrompt()
   const [installOpen, setInstallOpen] = useState(false)
+  const saveLabel = formatSaveStatusLabel(
+    saveStatus,
+    linkedToDisk,
+    linkedFileName,
+  )
 
   return (
     <footer className="status-bar">
@@ -41,8 +36,13 @@ export function StatusBar({
         className={`status-bar__save status-bar__save--${saveStatus}`}
         aria-live="polite"
         aria-atomic="true"
+        title={
+          linkedToDisk
+            ? 'Saved to the linked file on disk'
+            : 'Saved locally in this app — use Save As for a file on disk'
+        }
       >
-        {saveLabel(saveStatus)}
+        {saveLabel}
       </span>
       <span className="status-bar__stat">{wordCount} words</span>
       <span className="status-bar__stat">{headingCount} headings</span>

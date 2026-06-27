@@ -8,7 +8,9 @@ import './styles/print.css'
 import { App } from './app/App.tsx'
 import { AppProvider } from './app/AppProvider.tsx'
 
-registerSW({ immediate: true })
+if (!import.meta.env.TAURI_ENV_PLATFORM) {
+  registerSW({ immediate: true })
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

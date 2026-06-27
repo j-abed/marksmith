@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isTauri } from '../platform/desktop'
 import { isChromiumBrowser } from './installAppHelp'
 
 function isStandaloneDisplay(): boolean {
@@ -52,10 +53,12 @@ export function useInstallPrompt() {
   }, [])
 
   /** Chrome/Edge — View menu when not already installed. */
-  const showInstallInMenu = !isInstalled && isChromiumBrowser()
+  const showInstallInMenu =
+    !isTauri() && !isInstalled && isChromiumBrowser()
 
   /** Safari, Firefox, etc. — subtle footer hint. */
-  const showInstallInFooter = !isInstalled && !isChromiumBrowser()
+  const showInstallInFooter =
+    !isTauri() && !isInstalled && !isChromiumBrowser()
 
   return {
     canInstall,

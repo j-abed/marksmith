@@ -15,6 +15,8 @@ import {
   createMarkdownHighlighting,
 } from './editorTheme'
 
+const EMPTY_EXTENSIONS: Extension[] = []
+
 type RawEditorProps = {
   value: string
   onChange: (value: string) => void
@@ -30,7 +32,7 @@ export function RawEditor({
   value,
   onChange,
   showLineNumbers = true,
-  extraExtensions = [],
+  extraExtensions = EMPTY_EXTENSIONS,
   appKeymap,
   editorRef,
   scrollKey,
