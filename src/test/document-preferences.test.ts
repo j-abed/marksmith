@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   DOCUMENT_MODES_KEY,
+  DOCUMENT_SIDEBAR_KEY,
   documentModeKey,
   loadDocumentMode,
+  loadDocumentSidebarPrefs,
   migrateDocumentModeKey,
   saveDocumentMode,
+  saveDocumentSidebarPrefs,
 } from '../documents/documentPreferences'
 
 describe('documentPreferences', () => {
@@ -43,5 +46,29 @@ describe('documentPreferences', () => {
     migrateDocumentModeKey('title:Draft', 'title:Renamed')
     expect(loadDocumentMode({ title: 'Renamed' })).toBe('html')
     expect(loadDocumentMode({ title: 'Draft' })).toBeUndefined()
+  })
+
+  it('saves and loads sidebar prefs per document', () => {
+    saveDocumentSidebarPrefs(
+      { title: 'Notes' },
+      { open: true, tab: 'frontmatter' },
+    )
+    expect(loadDocumentSidebarPrefs({ title: 'Notes' })).toEqual({
+      open: true,
+      tab: 'frontmatter',
+    })
+    expect(localStorage.getItem(DOCUMENT_SIDEBAR_KEY)).toBeTruthy()
+  })
+
+  it('migrates sidebar prefs with mode keys', () => {
+    saveDocumentSidebarPrefs(
+      { title: 'Draft' },
+      { open: true, tab: 'outline' },
+    )
+    migrateDocumentModeKey('title:Draft', 'title:Renamed')
+    expect(loadDocumentSidebarPrefs({ title: 'Renamed' })).toEqual({
+      open: true,
+      tab: 'outline',
+    })
   })
 })

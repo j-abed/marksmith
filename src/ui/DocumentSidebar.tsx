@@ -10,6 +10,7 @@ type DocumentSidebarProps = {
   onClose: () => void
   headings: OutlineHeading[]
   markdown: string
+  hasFrontmatterMetadata: boolean
   onSelectLine: (line: number) => void
   onFrontmatterApply: (fields: FrontmatterFields) => void
 }
@@ -20,6 +21,7 @@ export function DocumentSidebar({
   onClose,
   headings,
   markdown,
+  hasFrontmatterMetadata,
   onSelectLine,
   onFrontmatterApply,
 }: DocumentSidebarProps) {
@@ -82,7 +84,11 @@ export function DocumentSidebar({
         </div>
       ) : (
         <div className="document-sidebar__panel" role="tabpanel">
-          <FrontmatterPanel markdown={markdown} onApply={onFrontmatterApply} />
+          <FrontmatterPanel
+            markdown={markdown}
+            hasMetadata={hasFrontmatterMetadata}
+            onApply={onFrontmatterApply}
+          />
         </div>
       )}
     </aside>

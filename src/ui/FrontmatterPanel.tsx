@@ -7,10 +7,15 @@ import {
 
 type FrontmatterPanelProps = {
   markdown: string
+  hasMetadata: boolean
   onApply: (fields: FrontmatterFields) => void
 }
 
-export function FrontmatterPanel({ markdown, onApply }: FrontmatterPanelProps) {
+export function FrontmatterPanel({
+  markdown,
+  hasMetadata,
+  onApply,
+}: FrontmatterPanelProps) {
   const parsed = parseFrontmatter(markdown)
   const title = parsed.fields.title ?? ''
   const date = parsed.fields.date ?? ''
@@ -19,7 +24,9 @@ export function FrontmatterPanel({ markdown, onApply }: FrontmatterPanelProps) {
   return (
     <div className="frontmatter-panel" data-testid="frontmatter-panel">
       <p className="frontmatter-panel__hint">
-        YAML header at the top of your Markdown file.
+        {hasMetadata
+          ? 'This document has YAML metadata at the top of the file.'
+          : 'YAML header at the top of your Markdown file.'}
       </p>
       <label className="frontmatter-panel__field">
         <span className="frontmatter-panel__label">Title</span>

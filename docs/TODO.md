@@ -26,6 +26,9 @@ Tracked follow-ups for Marksmith. See [architecture.md](./architecture.md) for d
 - [x] Mode memory per document (`marksmith:doc-modes` + recent entry `mode`)
 - [x] Save linked file format detection (`.md` vs `.html` handle for ⌘S)
 - [x] Frontmatter panel (title, tags, date from YAML header)
+- [x] Title ↔ frontmatter sync (YAML `title` on open; top bar updates existing YAML)
+- [x] Compare mode auto-sync toggle (inspect diffs without silent round-trip)
+- [x] Per-document sidebar restore (outline/frontmatter tab + open state)
 
 ## Medium term
 

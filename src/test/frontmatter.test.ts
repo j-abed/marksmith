@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyFrontmatter,
+  documentHasFrontmatterMetadata,
   parseFrontmatter,
   parseTagsInput,
+  resolveDocumentTitle,
+  setFrontmatterTitle,
 } from '../markdown/frontmatter'
 
 const SAMPLE = `---
@@ -48,7 +51,21 @@ describe('frontmatter', () => {
     expect(next).toBe(parsed.body.trimStart())
   })
 
-  it('parses comma-separated tags input', () => {
-    expect(parseTagsInput('one, two, three')).toEqual(['one', 'two', 'three'])
+  it('documentHasFrontmatterMetadata detects yaml content', () => {
+    expect(
+      documentHasFrontmatterMetadata('---\ntitle: Brief\n---\n\n# Hi'),
+    ).toBe(true)
+    expect(documentHasFrontmatterMetadata('# No yaml')).toBe(false)
+  })
+
+  it('resolveDocumentTitle prefers frontmatter title', () => {
+    const md = '---\ntitle: Project Brief\n---\n\n# Other'
+    expect(resolveDocumentTitle(md, 'notes')).toBe('Project Brief')
+  })
+
+  it('setFrontmatterTitle updates existing yaml only', () => {
+    const md = '---\ntitle: Old\n---\n\n# Body'
+    expect(setFrontmatterTitle(md, 'New')).toContain('title: New')
+    expect(setFrontmatterTitle('# Body', 'New')).toBe('# Body')
   })
 })

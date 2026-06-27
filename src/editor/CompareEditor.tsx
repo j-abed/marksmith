@@ -20,6 +20,10 @@ import {
   htmlDiffExtension,
 } from './htmlDiffDecorations'
 import { formatCompareDiffHint } from './compareDiff'
+import {
+  loadCompareAutoSync,
+  saveCompareAutoSync,
+} from './comparePreferences'
 
 type CompareEditorProps = {
   value: string
@@ -34,8 +38,9 @@ export function CompareEditor({
   appKeymap,
   editorRef,
 }: CompareEditorProps) {
+  const [autoSyncHtml, setAutoSyncHtml] = useState(loadCompareAutoSync)
   const { html, onHtmlChange, ready, syncHtmlFromMarkdown, applyHtmlToMarkdown } =
-    useHtmlMarkdownSync(value, onChange)
+    useHtmlMarkdownSync(value, onChange, { autoSyncToMarkdown: autoSyncHtml })
   const { showNotice } = useApp()
   const { compareDiff, diffLineCount, hasDiff, roundTripDrift } = useCompareDiff(
     value,
@@ -59,6 +64,11 @@ export function CompareEditor({
     onDividerPointerUp,
     onDividerPointerCancel,
   } = useSplitPaneRatio()
+
+  const handleAutoSyncChange = useCallback((enabled: boolean) => {
+    setAutoSyncHtml(enabled)
+    saveCompareAutoSync(enabled)
+  }, [])
 
   const handleMarkdownScroll = useCallback(
     (view: EditorView) => {
@@ -107,7 +117,7 @@ export function CompareEditor({
         : 'HTML matches Markdown render'
 
   const canSyncHtml = hasDiff
-  const canApplyHtml = hasDiff || roundTripDrift
+  const canApplyHtml = hasDiff || roundTripDrift || !autoSyncHtml
 
   const handleSyncHtmlFromMarkdown = useCallback(() => {
     void syncHtmlFromMarkdown().then(() => {
@@ -131,6 +141,15 @@ export function CompareEditor({
             onChange={(e) => setSyncScroll(e.target.checked)}
           />
           Sync scroll
+        </label>
+        <label className="split-editor__sync-toggle">
+          <input
+            type="checkbox"
+            checked={autoSyncHtml}
+            onChange={(e) => handleAutoSyncChange(e.target.checked)}
+            data-testid="compare-auto-sync"
+          />
+          Auto-sync HTML to Markdown
         </label>
         {hasDiff && (
           <label className="split-editor__sync-toggle">
@@ -164,7 +183,9 @@ export function CompareEditor({
         </button>
         <span className="split-editor__hint" data-testid="compare-diff-hint">
           {diffHint}
-          {roundTripDrift ? ' · Round-trip would change Markdown' : ''}
+          {roundTripDrift && autoSyncHtml
+            ? ' · Round-trip would change Markdown'
+            : ''}
         </span>
       </div>
       <div className="split-editor__panes" ref={panesRef}>

@@ -72,7 +72,8 @@ npx serve docs
 - **HTML import:** open `.html`, paste from clipboard, drag-and-drop — converted to Markdown on import
 - **Save As HTML:** standalone sanitized HTML page from current Markdown
 - File System Access API (where supported) + download fallback; recent documents; ⌘S respects linked `.md` vs `.html` format
-- **Frontmatter panel** — edit YAML title, date, and tags in the document sidebar
+- **Frontmatter panel** — edit YAML title, date, and tags in the document sidebar (title syncs with the top bar)
+- **Compare auto-sync toggle** — inspect HTML drift without silent round-trip; enable when you want edits to flow back to Markdown
 - Autosave to `localStorage`, export as Markdown / HTML / plain text / JSON
 - Resizable split/compare panes, scroll sync, outline sidebar, zen mode
 - Light and dark themes

@@ -171,3 +171,27 @@ export function parseTagsInput(input: string): string[] {
     .map((tag) => tag.trim())
     .filter(Boolean)
 }
+
+/** Prefer YAML `title` when present; otherwise use the supplied fallback. */
+export function resolveDocumentTitle(
+  markdown: string,
+  fallbackTitle: string,
+): string {
+  const fmTitle = parseFrontmatter(markdown).fields.title?.trim()
+  return fmTitle || fallbackTitle.trim() || 'Untitled'
+}
+
+/** Update `title:` in an existing frontmatter block; no-op if the doc has no YAML header. */
+export function setFrontmatterTitle(markdown: string, title: string): string {
+  const parsed = parseFrontmatter(markdown)
+  if (!parsed.hasFrontmatter) return markdown
+  return applyFrontmatter(markdown, {
+    ...parsed.fields,
+    title: title.trim() || undefined,
+  })
+}
+
+export function documentHasFrontmatterMetadata(markdown: string): boolean {
+  const parsed = parseFrontmatter(markdown)
+  return parsed.hasFrontmatter && hasFrontmatterContent(parsed.fields)
+}

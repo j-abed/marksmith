@@ -64,6 +64,10 @@ export function App() {
     showNotice,
     wordCount,
     headingCount,
+    documentSessionKey,
+    hasFrontmatterMetadata,
+    loadSidebarPrefs,
+    saveSidebarPrefs,
   } = useApp()
   const editorRef = useRef<EditorView | null>(null)
   const { mode, document: doc, saveStatus, zenMode } = state
@@ -71,6 +75,32 @@ export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(loadSidebarOpen)
   const [sidebarTab, setSidebarTab] = useState<DocumentSidebarTab>(loadSidebarTab)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const lastSessionKey = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (lastSessionKey.current === documentSessionKey) return
+    lastSessionKey.current = documentSessionKey
+
+    const saved = loadSidebarPrefs()
+    if (saved) {
+      setSidebarOpen(saved.open)
+      setSidebarTab(saved.tab)
+      return
+    }
+    if (hasFrontmatterMetadata) {
+      setSidebarOpen(true)
+      setSidebarTab('frontmatter')
+      return
+    }
+    setSidebarOpen(loadSidebarOpen())
+    setSidebarTab(loadSidebarTab())
+  }, [documentSessionKey, hasFrontmatterMetadata, loadSidebarPrefs])
+
+  useEffect(() => {
+    saveSidebarPrefs({ open: sidebarOpen, tab: sidebarTab })
+    saveSidebarOpen(sidebarOpen)
+    saveSidebarTab(sidebarTab)
+  }, [sidebarOpen, sidebarTab, saveSidebarPrefs])
 
   const openFind = useCallback(() => {
     const view = editorRef.current
@@ -123,15 +153,12 @@ export function App() {
 
   const openSidebar = useCallback((tab: DocumentSidebarTab) => {
     setSidebarTab(tab)
-    saveSidebarTab(tab)
     setSidebarOpen(true)
-    saveSidebarOpen(true)
   }, [])
 
   const toggleOutline = useCallback(() => {
     if (sidebarOpen && sidebarTab === 'outline') {
       setSidebarOpen(false)
-      saveSidebarOpen(false)
       return
     }
     openSidebar('outline')
@@ -140,7 +167,6 @@ export function App() {
   const toggleFrontmatter = useCallback(() => {
     if (sidebarOpen && sidebarTab === 'frontmatter') {
       setSidebarOpen(false)
-      saveSidebarOpen(false)
       return
     }
     openSidebar('frontmatter')
@@ -148,7 +174,6 @@ export function App() {
 
   const closeSidebar = useCallback(() => {
     setSidebarOpen(false)
-    saveSidebarOpen(false)
   }, [])
 
   const handleFrontmatterApply = useCallback(
@@ -258,6 +283,7 @@ export function App() {
             markdown={doc.markdown}
             onSelectLine={jumpToHeading}
             onFrontmatterApply={handleFrontmatterApply}
+            hasFrontmatterMetadata={hasFrontmatterMetadata}
           />
         )}
         <main className="app-main" id="editor-panel" role="tabpanel">

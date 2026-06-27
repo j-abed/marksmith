@@ -13,8 +13,11 @@ import { AUTOSAVE_DEBOUNCE_MS, loadDraft, saveDraft } from '../documents/autosav
 import {
   documentModeKey,
   loadDocumentMode,
+  loadDocumentSidebarPrefs,
   migrateDocumentModeKey,
   saveDocumentMode,
+  saveDocumentSidebarPrefs,
+  type DocumentSidebarPrefs,
 } from '../documents/documentPreferences'
 import { draftSnapshot } from '../documents/draftSnapshot'
 import {
@@ -37,6 +40,11 @@ import {
 } from '../documents/recentDocuments'
 import { countWords } from '../markdown/wordCount'
 import { extractOutline, type OutlineHeading } from '../markdown/outline'
+import {
+  documentHasFrontmatterMetadata,
+  resolveDocumentTitle,
+  setFrontmatterTitle,
+} from '../markdown/frontmatter'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import {
   appReducer,
@@ -67,6 +75,10 @@ type AppContextValue = {
   canSaveToDisk: boolean
   linkedFileFormat: LinkedFileFormat | null
   linkedFileName: string | null
+  documentSessionKey: string
+  hasFrontmatterMetadata: boolean
+  loadSidebarPrefs: () => DocumentSidebarPrefs | undefined
+  saveSidebarPrefs: (prefs: DocumentSidebarPrefs) => void
   recentDocuments: RecentDocument[]
   outline: OutlineHeading[]
   notice: string | null
@@ -206,10 +218,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ? (preferredMode as EditorMode)
           : 'raw'
       const mode = resolveStoredMode({ sourceName, title }, fallback)
+      const resolvedTitle = resolveDocumentTitle(markdown, title)
       syncLinkedFile(handle, sourceName)
-      dispatch({ type: 'loadDocument', title, markdown, mode })
+      dispatch({
+        type: 'loadDocument',
+        title: resolvedTitle,
+        markdown,
+        mode,
+      })
       lastSavedSnapshot.current = null
-      recordRecent(title, markdown, sourceName, importedFromHtml, mode)
+      recordRecent(resolvedTitle, markdown, sourceName, importedFromHtml, mode)
     },
     [recordRecent, syncLinkedFile],
   )
@@ -430,9 +448,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const draft = loadDraft()
     if (draft?.document) {
+      const title = resolveDocumentTitle(
+        draft.document.markdown,
+        draft.document.title,
+      )
       dispatch({
         type: 'restoreDocument',
-        document: { ...draft.document, dirty: false },
+        document: { ...draft.document, title, dirty: false },
         mode: draft.mode as EditorMode | undefined,
         theme: draft.theme as Theme | undefined,
       })
@@ -528,7 +550,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
           documentModeKey({ title }),
         )
       }
+      const nextMarkdown = setFrontmatterTitle(state.document.markdown, title)
+      if (nextMarkdown !== state.document.markdown) {
+        dispatch({ type: 'setMarkdown', markdown: nextMarkdown })
+      }
       dispatch({ type: 'setTitle', title })
+    },
+    [state.document.markdown, state.document.title],
+  )
+
+  const hasFrontmatterMetadata = useMemo(
+    () => documentHasFrontmatterMetadata(state.document.markdown),
+    [state.document.markdown],
+  )
+
+  const loadSidebarPrefs = useCallback(
+    () =>
+      loadDocumentSidebarPrefs({
+        sourceName: sourceNameRef.current,
+        title: state.document.title,
+      }),
+    [state.document.title],
+  )
+
+  const saveSidebarPrefs = useCallback(
+    (prefs: DocumentSidebarPrefs) => {
+      saveDocumentSidebarPrefs(
+        {
+          sourceName: sourceNameRef.current,
+          title: state.document.title,
+        },
+        prefs,
+      )
     },
     [state.document.title],
   )
@@ -554,6 +607,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       canSaveToDisk: hasFileHandle,
       linkedFileFormat,
       linkedFileName,
+      documentSessionKey: state.document.id,
+      hasFrontmatterMetadata,
+      loadSidebarPrefs,
+      saveSidebarPrefs,
       recentDocuments,
       outline,
       notice,
@@ -578,6 +635,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hasFileHandle,
       linkedFileFormat,
       linkedFileName,
+      hasFrontmatterMetadata,
+      loadSidebarPrefs,
+      saveSidebarPrefs,
       recentDocuments,
       outline,
       wordCount,

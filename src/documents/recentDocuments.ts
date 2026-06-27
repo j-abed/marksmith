@@ -1,3 +1,5 @@
+import { documentHasFrontmatterMetadata } from '../markdown/frontmatter'
+
 export type RecentDocument = {
   id: string
   title: string
@@ -114,5 +116,6 @@ export function formatRecentDescription(
 ): string {
   const parts = [timeLabel]
   if (entry.importedFromHtml) parts.push('Imported from HTML')
+  if (documentHasFrontmatterMetadata(entry.markdown)) parts.push('YAML metadata')
   return parts.join(' · ')
 }

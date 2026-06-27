@@ -47,7 +47,7 @@ Round-trip is not lossless. Compare mode aligns expected vs. actual HTML with **
 - **Inserted lines** — full-line marks on the HTML pane (`.compare-diff-line`)
 - **Changed lines** — word/token-level inline marks when a single-line edit is detected (`.compare-diff-word`)
 
-The toolbar hint summarizes line and word counts (e.g. “3 words differ on 1 HTML line”). Editing the HTML pane still debounces into Markdown (~350ms); diff highlights appear until the round-trip converges.
+The toolbar hint summarizes line and word counts (e.g. “3 words differ on 1 HTML line”). **Auto-sync HTML to Markdown** is off by default in Compare mode so you can inspect drift; enable it to round-trip HTML edits into canonical Markdown (same debounced behavior as HTML mode).
 
 Toolbar actions:
 
@@ -69,6 +69,8 @@ Mode switching is in the **Mode** dropdown (top bar). Markdown is preserved when
 
 **Per-document mode memory:** the last mode for each document is stored in `localStorage` (`marksmith:doc-modes`), keyed by `file:{sourceName}` for file-backed docs or `title:{title}` for untitled in-memory docs. Recent-document entries also store `mode`. Opening a file, reopening from **File → Recent**, or starting a new Untitled doc restores the saved mode. Renaming an untitled doc or **Save As** migrates the stored key.
 
+**Title ↔ frontmatter:** when a document has a YAML header with `title:`, that value becomes the document title on open. Editing the top-bar title updates `title:` in an existing YAML block.
+
 ### Hybrid mode
 
 Hybrid uses a CodeMirror `ViewPlugin` that walks the Lezer syntax tree and applies mark/replace decorations on headings, emphasis, links, lists, blockquotes, task lists, and fenced code. The document string is never modified.
@@ -89,6 +91,8 @@ Hybrid uses a CodeMirror `ViewPlugin` that walks the Lezer syntax tree and appli
 
 - **Outline** — jump to headings in the editor or preview
 - **Frontmatter** — edit YAML `title`, `date`, and `tags` at the top of the Markdown file (written back into canonical `markdown` on blur)
+
+Per-document sidebar state (`marksmith:doc-sidebar`) restores which tab was open. Documents with YAML metadata open the frontmatter tab by default when no prior preference exists.
 
 ## Search & editing
 

@@ -47,4 +47,22 @@ describe('useHtmlMarkdownSync', () => {
       { timeout: 2000 },
     )
   })
+
+  it('skips markdown sync when autoSyncToMarkdown is false', async () => {
+    const onChange = vi.fn()
+    const { result } = renderHook(() =>
+      useHtmlMarkdownSync('# Hello', onChange, { autoSyncToMarkdown: false }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.ready).toBe(true)
+    })
+
+    act(() => {
+      result.current.onHtmlChange('<p>Updated</p>')
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })

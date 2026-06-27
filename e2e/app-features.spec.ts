@@ -420,13 +420,38 @@ test.describe('lazy-loaded modes', () => {
     await page.keyboard.press('Meta+a')
     await page.keyboard.insertText('<p>Custom HTML line</p>')
 
-    // Assert before compare mode debounces HTML → Markdown (~350ms).
     await expect(page.getByTestId('compare-diff-hint')).toHaveText(/differ/i, {
-      timeout: 500,
+      timeout: 5000,
     })
     await expect(
       page.locator('.compare-diff-line, .compare-diff-word').first(),
-    ).toBeVisible({ timeout: 500 })
+    ).toBeVisible({ timeout: 5000 })
+  })
+
+  test('compare auto-sync toggle controls html round-trip', async ({ page }) => {
+    await gotoFresh(page)
+    await selectMode(page, 'compare')
+    await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 15_000 })
+
+    const autoSync = page.getByTestId('compare-auto-sync')
+    await expect(autoSync).not.toBeChecked()
+
+    const htmlPane = page.locator('.compare-editor .html-source-editor .cm-content')
+    await htmlPane.click()
+    await page.keyboard.press('Meta+a')
+    await page.keyboard.insertText('<p>Drift check</p>')
+
+    await expect(page.getByTestId('compare-diff-hint')).toHaveText(/differ/i, {
+      timeout: 3000,
+    })
+
+    await autoSync.check()
+    await htmlPane.click()
+    await page.keyboard.type(' ')
+    await expect(page.getByTestId('compare-diff-hint')).toContainText(
+      'matches Markdown render',
+      { timeout: 8000 },
+    )
   })
 
   test('compare mode sync actions update panes', async ({ page }) => {

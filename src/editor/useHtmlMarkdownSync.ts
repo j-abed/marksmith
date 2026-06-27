@@ -7,7 +7,9 @@ const SYNC_DEBOUNCE_MS = 350
 export function useHtmlMarkdownSync(
   markdown: string,
   onMarkdownChange: (markdown: string) => void,
+  options?: { autoSyncToMarkdown?: boolean },
 ) {
+  const autoSyncToMarkdown = options?.autoSyncToMarkdown ?? true
   const [html, setHtml] = useState('')
   const [ready, setReady] = useState(false)
   const htmlEditingRef = useRef(false)
@@ -65,6 +67,8 @@ export function useHtmlMarkdownSync(
 
   const onHtmlChange = useCallback((nextHtml: string) => {
     setHtml(nextHtml)
+    if (!autoSyncToMarkdown) return
+
     htmlEditingRef.current = true
 
     if (debounceRef.current !== null) {
@@ -84,7 +88,7 @@ export function useHtmlMarkdownSync(
           htmlEditingRef.current = false
         })
     }, SYNC_DEBOUNCE_MS)
-  }, [])
+  }, [autoSyncToMarkdown])
 
   useEffect(() => {
     return () => {
