@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Marksmith — a local Markdown editor where your .md file is the source of truth. Raw, Preview, Split, Hybrid, HTML, and Compare modes."
+      content="Marksmith — a local Markdown editor where your .md file is the source of truth. Six modes, YAML frontmatter, and Compare diff for HTML round-trip."
     />
     <meta name="theme-color" content="#08080a" />
     <meta property="og:title" content="Marksmith" />
@@ -159,11 +159,23 @@
                   type="button"
                   class="hero-shot__tab"
                   role="tab"
-                  data-shot-tab="scroll"
+                  data-shot-tab="frontmatter"
                   aria-selected="false"
                   aria-controls="hero-shot-img"
                 >
-                  scroll sync
+                  frontmatter
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  class="hero-shot__tab"
+                  role="tab"
+                  data-shot-tab="compare"
+                  aria-selected="false"
+                  aria-controls="hero-shot-img"
+                >
+                  compare
                 </button>
               </li>
             </ul>
@@ -231,6 +243,64 @@
         </div>
       </section>
 
+      <section class="feature-band feature-band--reverse reveal" aria-labelledby="frontmatter-heading">
+        <div class="feature-band__inner">
+          <div class="feature-band__copy">
+            <p class="section-label">Frontmatter</p>
+            <h2 id="frontmatter-heading">YAML metadata in the sidebar</h2>
+            <p>
+              Edit <code>title</code>, <code>date</code>, and <code>tags</code> from a
+              dedicated panel. The top-bar title syncs with YAML on open and when you rename.
+            </p>
+            <ul>
+              <li>Documents with metadata open the frontmatter tab automatically</li>
+              <li>Per-document sidebar state restores from recents</li>
+              <li>Recent list notes when a doc has YAML metadata</li>
+            </ul>
+          </div>
+          <div class="feature-band__visual">
+            <img
+              src="assets/app-frontmatter.png"
+              data-showcase-shot="frontmatter"
+              width="1440"
+              height="900"
+              alt="Marksmith frontmatter panel editing YAML title, date, and tags beside split view"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="feature-band reveal" aria-labelledby="compare-heading">
+        <div class="feature-band__inner">
+          <div class="feature-band__copy">
+            <p class="section-label">Compare mode</p>
+            <h2 id="compare-heading">Inspect HTML drift before you sync</h2>
+            <p>
+              Compare aligns Markdown render vs. edited HTML with line and word-level
+              highlights. Auto-sync is off by default so diffs stay visible while you review.
+            </p>
+            <ul>
+              <li>LCS line alignment and inline word highlights</li>
+              <li>Apply HTML to Markdown or sync HTML from source</li>
+              <li>Optional auto-sync toggle when you want round-trip edits</li>
+            </ul>
+          </div>
+          <div class="feature-band__visual">
+            <img
+              src="assets/app-compare.png"
+              data-showcase-shot="compare"
+              width="1440"
+              height="900"
+              alt="Marksmith compare mode showing Markdown beside HTML with diff highlights"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </section>
+
       <section class="feature-band feature-band--reverse reveal" aria-labelledby="sanitize-heading">
         <div class="feature-band__inner">
           <div class="feature-band__copy">
@@ -267,37 +337,99 @@
           <h2 id="modes-heading">Six modes, one document</h2>
           <p>Switch views without transforming your underlying Markdown string.</p>
         </div>
-        <div class="modes__grid">
-          <button type="button" class="mode-tile" data-shot-tab="raw">
-            <div class="mode-tile__label">raw</div>
-            <h3>Source editing</h3>
-            <p>CodeMirror with GFM syntax highlighting and toolbar commands.</p>
-          </button>
-          <button type="button" class="mode-tile" data-shot-tab="preview">
-            <div class="mode-tile__label">preview</div>
-            <h3>Rendered output</h3>
-            <p>Sanitized HTML with code highlighting and technical-docs typography.</p>
-          </button>
-          <button type="button" class="mode-tile" data-shot-tab="split">
-            <div class="mode-tile__label">split</div>
-            <h3>Live side-by-side</h3>
-            <p>Edit and preview together with linked scrolling.</p>
-          </button>
-          <button type="button" class="mode-tile" data-shot-tab="hybrid">
-            <div class="mode-tile__label">hybrid</div>
-            <h3>Softened syntax</h3>
-            <p>Prototype decorations for headings, emphasis, code, and links.</p>
-          </button>
-          <a class="mode-tile mode-tile--link" href="app/">
-            <div class="mode-tile__label">html</div>
-            <h3>Edit rendered HTML</h3>
-            <p>Import LLM output; edits round-trip to canonical Markdown.</p>
-          </a>
-          <a class="mode-tile mode-tile--link" href="app/">
-            <div class="mode-tile__label">compare</div>
-            <h3>Markdown ↔ HTML</h3>
-            <p>Side-by-side diff, scroll sync, and sync/apply actions.</p>
-          </a>
+
+        <div class="mode-showcase" data-mode-showcase>
+          <figure class="mode-showcase__stage" aria-labelledby="mode-showcase-heading">
+            <div class="mode-showcase__viewport">
+              <img
+                id="mode-showcase-img"
+                class="mode-showcase__img"
+                src="assets/app-raw.png"
+                width="1440"
+                height="900"
+                alt="Marksmith raw mode with CodeMirror syntax highlighting and formatting toolbar"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <figcaption class="mode-showcase__caption">
+              <p id="mode-showcase-status" class="sr-only" aria-live="polite">
+                Showing raw mode
+              </p>
+              <span class="mode-showcase__eyebrow" id="mode-showcase-label">raw</span>
+              <h3 id="mode-showcase-heading" class="mode-showcase__title">Source editing</h3>
+              <p id="mode-showcase-desc" class="mode-showcase__desc">
+                CodeMirror with GFM syntax highlighting and toolbar commands.
+              </p>
+            </figcaption>
+          </figure>
+
+          <div
+            class="mode-showcase__tabs"
+            role="tablist"
+            aria-label="Editor modes"
+          >
+            <button
+              type="button"
+              role="tab"
+              class="mode-showcase__tab is-active"
+              data-mode-id="raw"
+              aria-selected="true"
+              aria-controls="mode-showcase-img"
+            >
+              raw
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="mode-showcase__tab"
+              data-mode-id="preview"
+              aria-selected="false"
+              aria-controls="mode-showcase-img"
+            >
+              preview
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="mode-showcase__tab"
+              data-mode-id="split"
+              aria-selected="false"
+              aria-controls="mode-showcase-img"
+            >
+              split
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="mode-showcase__tab"
+              data-mode-id="hybrid"
+              aria-selected="false"
+              aria-controls="mode-showcase-img"
+            >
+              hybrid
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="mode-showcase__tab"
+              data-mode-id="html"
+              aria-selected="false"
+              aria-controls="mode-showcase-img"
+            >
+              html
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="mode-showcase__tab"
+              data-mode-id="compare"
+              aria-selected="false"
+              aria-controls="mode-showcase-img"
+            >
+              compare
+            </button>
+          </div>
         </div>
       </section>
 
@@ -317,49 +449,52 @@
     </main>
 
     <footer class="site-footer">
-      <p>
-        Marksmith · MIT ·
-        <a href="https://github.com/j-abed/marksmith">Source</a> ·
-        <a href="https://github.com/j-abed/marksmith/blob/main/CONTRIBUTING.md">Contributing</a> ·
-        <a href="https://github.com/j-abed/marksmith/blob/main/docs/architecture.md">Architecture</a>
-      </p>
-      <p>React · CodeMirror 6 · unified / remark / rehype</p>
-      <p class="site-footer__meta">
-        <span class="made-in-nyc">
-          made with <span class="made-in-nyc__heart" aria-hidden="true">♥</span> in New York, NY
-          <svg
-            class="made-in-nyc__flag"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 19 10"
-            width="14"
-            height="10"
-            aria-hidden="true"
+      <div class="site-footer__inner">
+        <p class="site-footer__aside">
+          <span class="made-in-nyc">
+            made with <span class="made-in-nyc__heart" aria-hidden="true">♥</span> in New York, NY
+            <svg
+              class="made-in-nyc__flag"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 19 10"
+              width="14"
+              height="10"
+              aria-hidden="true"
+            >
+              <rect width="19" height="10" fill="#b22234" />
+              <path
+                fill="#fff"
+                d="M0 1.54h19V3.08H0V4.62h19V6.15H0V7.69h19V10H0V1.54z"
+              />
+              <rect width="8" height="5.38" fill="#3c3b6e" />
+            </svg>
+          </span>
+        </p>
+        <p class="site-footer__primary">
+          Marksmith · MIT ·
+          <a href="https://github.com/j-abed/marksmith">Source</a> ·
+          <a href="https://github.com/j-abed/marksmith/blob/main/CONTRIBUTING.md">Contributing</a> ·
+          <a href="https://github.com/j-abed/marksmith/blob/main/docs/architecture.md">Architecture</a>
+        </p>
+        <p class="site-footer__meta">
+          <a
+            class="footer__bmc"
+            href="https://buymeacoffee.com/jasonabed"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Buy me a coffee"
           >
-            <rect width="19" height="10" fill="#b22234" />
-            <path
-              fill="#fff"
-              d="M0 1.54h19V3.08H0V4.62h19V6.15H0V7.69h19V10H0V1.54z"
+            <img
+              src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+              alt="Buy me a coffee"
+              width="162"
+              height="45"
+              loading="lazy"
+              decoding="async"
             />
-            <rect width="8" height="5.38" fill="#3c3b6e" />
-          </svg>
-        </span>
-        <a
-          class="footer__bmc"
-          href="https://buymeacoffee.com/jasonabed"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Buy me a coffee"
-        >
-          <img
-            src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
-            alt="Buy me a coffee"
-            width="162"
-            height="45"
-            loading="lazy"
-            decoding="async"
-          />
-        </a>
-      </p>
+          </a>
+        </p>
+      </div>
     </footer>
 
     <script src="showcase.js" defer></script>

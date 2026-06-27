@@ -683,71 +683,153 @@ code {
   color: var(--text-muted);
 }
 
-.modes__grid {
+.mode-showcase {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 24px;
 }
 
-.mode-tile {
-  padding: 20px;
+.mode-showcase__stage {
+  margin: 0;
+}
+
+.mode-showcase__viewport {
+  overflow: hidden;
+  border-radius: 14px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  width: 100%;
-  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  background: var(--bg-raised);
+  box-shadow:
+    0 24px 60px color-mix(in srgb, #000 28%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--copper) 6%, transparent);
 }
 
-.mode-tile--link {
+.mode-showcase__img {
   display: block;
-  text-decoration: none;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+  transition: opacity 0.22s ease, transform 0.35s ease;
 }
 
-.mode-tile:hover {
+.mode-showcase__img.is-fading {
+  opacity: 0;
+  transform: scale(0.992);
+}
+
+.mode-showcase__caption {
+  padding: 20px 4px 0;
+  text-align: center;
+}
+
+.mode-showcase__eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--copper) 35%, var(--border));
+  background: color-mix(in srgb, var(--copper) 10%, var(--surface));
+  color: var(--copper-bright);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.mode-showcase__title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+.mode-showcase__desc {
+  margin: 0 auto;
+  max-width: 42rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.mode-showcase__tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mode-showcase__tab {
+  position: relative;
+  overflow: hidden;
+  padding: 12px 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.mode-showcase__tab:hover {
+  color: var(--text);
   border-color: color-mix(in srgb, var(--copper) 45%, var(--border));
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px color-mix(in srgb, #000 12%, transparent);
+  transform: translateY(-1px);
 }
 
-.mode-tile:focus-visible {
+.mode-showcase__tab:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-.mode-tile.is-active {
+.mode-showcase__tab.is-active {
+  color: var(--text);
   border-color: color-mix(in srgb, var(--copper) 60%, var(--border));
   background: color-mix(in srgb, var(--copper) 10%, var(--surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--copper) 20%, transparent);
 }
 
-.mode-tile__label {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--copper-bright);
-  text-transform: lowercase;
-  margin-bottom: 8px;
+.mode-showcase__tab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--copper), var(--copper-bright));
+  transform-origin: left center;
+  animation: mode-showcase-progress 4.5s linear forwards;
 }
 
-.mode-tile h3 {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  font-weight: 600;
+.mode-showcase.is-paused .mode-showcase__tab.is-active::after {
+  animation-play-state: paused;
 }
 
-.mode-tile p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+@keyframes mode-showcase-progress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-showcase__tab.is-active::after {
+    display: none;
+  }
+
+  .mode-showcase__img {
+    transition: none;
+  }
 }
 
 .cta {
   max-width: var(--max);
-  margin: 0 auto 96px;
+  margin: 0 auto 64px;
   padding: 0 24px;
 }
 
@@ -783,10 +865,19 @@ code {
 
 .site-footer {
   border-top: 1px solid var(--border-subtle);
-  padding: 32px 24px 48px;
-  text-align: center;
-  font-size: 0.85rem;
+  padding: 14px 24px 18px;
+  font-size: 0.78rem;
+  line-height: 1.45;
   color: var(--text-faint);
+}
+
+.site-footer__inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px 16px;
+  max-width: var(--max-wide);
+  margin: 0 auto;
 }
 
 .site-footer a {
@@ -800,16 +891,25 @@ code {
 }
 
 .site-footer p {
-  margin: 0 0 8px;
+  margin: 0;
+}
+
+.site-footer__aside {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.site-footer__primary {
+  grid-column: 2;
+  justify-self: center;
+  text-align: center;
 }
 
 .site-footer__meta {
+  grid-column: 3;
+  justify-self: end;
   display: inline-flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 0 !important;
 }
 
 .footer__bmc {
@@ -827,9 +927,9 @@ code {
 
 .footer__bmc img {
   display: block;
-  height: 28px;
+  height: 22px;
   width: auto;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .made-in-nyc {
@@ -852,9 +952,31 @@ code {
   box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--text) 12%, transparent);
 }
 
+@media (max-width: 899px) {
+  .site-footer__inner {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .site-footer__aside {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .site-footer__primary {
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .site-footer__meta {
+    grid-column: 1;
+    justify-self: end;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pillar:hover,
-  .mode-tile:hover,
+  .mode-showcase__tab:hover,
   .feature-band__visual:hover img {
     transform: none;
   }
@@ -877,8 +999,8 @@ code {
     direction: ltr;
   }
 
-  .modes__grid {
-    grid-template-columns: 1fr 1fr;
+  .mode-showcase__tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .nav a:not(.btn) {
@@ -905,8 +1027,8 @@ code {
     padding-top: 48px;
   }
 
-  .modes__grid {
-    grid-template-columns: 1fr;
+  .mode-showcase__tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hero__actions {

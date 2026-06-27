@@ -1,3 +1,11 @@
+---
+title: Project Brief
+date: 2026-06-26
+tags:
+  - local-first
+  - markdown
+---
+
 # Project Brief
 
 ## Objective

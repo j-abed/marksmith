@@ -47,6 +47,7 @@ async function seedShowcaseDraft(page, theme) {
       )
       localStorage.setItem('marksmith:theme', theme)
       localStorage.removeItem('marksmith:doc-modes')
+      localStorage.removeItem('marksmith:doc-sidebar')
       localStorage.removeItem('marksmith:recent')
     },
     { markdown: showcaseMarkdown, title: showcaseTitle, theme },
@@ -66,8 +67,31 @@ async function selectMode(page, mode) {
   await page.getByTestId(`mode-${mode}`).click()
 }
 
+async function closeSidebarIfOpen(page) {
+  const closeBtn = page.locator('.document-sidebar__close')
+  if (await closeBtn.isVisible()) {
+    await closeBtn.click()
+    await page.waitForTimeout(300)
+  }
+}
+
+async function captureFrontmatter(page, theme) {
+  const suffix = theme === 'dark' ? '' : '-light'
+
+  await page.waitForSelector('.document-sidebar', { timeout: 10_000 })
+  await page.waitForSelector('[data-testid="frontmatter-panel"]', {
+    timeout: 10_000,
+  })
+  await page.waitForTimeout(500)
+  await page.locator('.app-shell').screenshot({
+    path: join(assets, `app-frontmatter${suffix}.png`),
+  })
+}
+
 async function captureModes(page, theme) {
   const suffix = theme === 'dark' ? '' : '-light'
+
+  await closeSidebarIfOpen(page)
 
   await selectMode(page, 'split')
   await page.waitForTimeout(600)
@@ -100,6 +124,44 @@ async function captureModes(page, theme) {
   await page.waitForTimeout(400)
   await page.locator('.app-shell').screenshot({
     path: join(assets, `app-split-scrolled${suffix}.png`),
+  })
+}
+
+async function captureHtml(page, theme) {
+  const suffix = theme === 'dark' ? '' : '-light'
+
+  await closeSidebarIfOpen(page)
+  await selectMode(page, 'html')
+  await page.waitForSelector('[data-testid="html-editor"]', { timeout: 15_000 })
+  await page.waitForTimeout(600)
+  await page.locator('.app-shell').screenshot({
+    path: join(assets, `app-html${suffix}.png`),
+  })
+}
+
+async function captureCompare(page, theme) {
+  const suffix = theme === 'dark' ? '' : '-light'
+
+  await closeSidebarIfOpen(page)
+  await selectMode(page, 'compare')
+  await page.waitForSelector('[data-testid="compare-editor"]', {
+    timeout: 15_000,
+  })
+  await page.waitForTimeout(600)
+
+  const htmlPane = page.locator(
+    '.compare-editor .html-source-editor .cm-content',
+  )
+  await htmlPane.click()
+  await page.keyboard.press('Meta+a')
+  await page.keyboard.insertText('<p>Custom HTML line</p>')
+  await page.waitForSelector('.compare-diff-line, .compare-diff-word', {
+    timeout: 5000,
+  })
+  await page.waitForTimeout(400)
+
+  await page.locator('.app-shell').screenshot({
+    path: join(assets, `app-compare${suffix}.png`),
   })
 }
 
@@ -136,12 +198,15 @@ async function main() {
         showcaseTitle,
         { timeout: 10_000 },
       )
-      await page.locator('.cm-content').getByText('Project Brief').waitFor({
+      await page.locator('.cm-content').getByText('Key Principles').waitFor({
         timeout: 10_000,
       })
 
       await setAppTheme(page, theme)
+      await captureFrontmatter(page, theme)
       await captureModes(page, theme)
+      await captureHtml(page, theme)
+      await captureCompare(page, theme)
 
       await browser.close()
     }

@@ -17,7 +17,7 @@ Tracked follow-ups for Marksmith. See [architecture.md](./architecture.md) for d
 - [x] Compare mode: “Apply HTML to Markdown” / “Sync from Markdown” actions
 - [x] Recent documents: note when entry was imported from HTML
 - [x] Keyboard shortcuts reference (`View` menu or help dialog)
-- [x] Regenerate showcase screenshots after major UI changes (`npm run capture:showcase`)
+- [x] Regenerate showcase screenshots after major UI changes (`npm run capture:showcase`) — includes Compare diff and Frontmatter panel shots
 - [x] Install as app (PWA) — **View → Install app…** when the browser offers it
 
 ## Recently shipped
