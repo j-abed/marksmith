@@ -1,0 +1,102 @@
+/* Theme-aware syntax colors for preview code blocks (GitHub-inspired) */
+
+[data-theme='light'] .preview-content pre {
+  background: var(--code-block-bg);
+  color: #24292f;
+}
+
+[data-theme='dark'] .preview-content pre {
+  background: var(--code-block-bg);
+  color: #e6edf3;
+}
+
+.preview-content .hljs {
+  background: transparent !important;
+  color: inherit;
+}
+
+[data-theme='light'] .preview-content .hljs-doctag,
+[data-theme='light'] .preview-content .hljs-keyword,
+[data-theme='light'] .preview-content .hljs-meta .hljs-keyword,
+[data-theme='light'] .preview-content .hljs-template-tag,
+[data-theme='light'] .preview-content .hljs-template-variable,
+[data-theme='light'] .preview-content .hljs-type,
+[data-theme='light'] .preview-content .hljs-variable.language_ {
+  color: #cf222e;
+}
+
+[data-theme='light'] .preview-content .hljs-title,
+[data-theme='light'] .preview-content .hljs-title.class_,
+[data-theme='light'] .preview-content .hljs-title.function_,
+[data-theme='light'] .preview-content .hljs-title.method_ {
+  color: #8250df;
+}
+
+[data-theme='light'] .preview-content .hljs-attr,
+[data-theme='light'] .preview-content .hljs-attribute,
+[data-theme='light'] .preview-content .hljs-literal,
+[data-theme='light'] .preview-content .hljs-meta,
+[data-theme='light'] .preview-content .hljs-number,
+[data-theme='light'] .preview-content .hljs-operator,
+[data-theme='light'] .preview-content .hljs-selector-attr,
+[data-theme='light'] .preview-content .hljs-selector-class,
+[data-theme='light'] .preview-content .hljs-selector-id,
+[data-theme='light'] .preview-content .hljs-variable {
+  color: #0550ae;
+}
+
+[data-theme='light'] .preview-content .hljs-string,
+[data-theme='light'] .preview-content .hljs-regexp,
+[data-theme='light'] .preview-content .hljs-symbol,
+[data-theme='light'] .preview-content .hljs-meta .hljs-string {
+  color: #0a3069;
+}
+
+[data-theme='light'] .preview-content .hljs-comment,
+[data-theme='light'] .preview-content .hljs-code,
+[data-theme='light'] .preview-content .hljs-formula {
+  color: #57606a;
+}
+
+[data-theme='dark'] .preview-content .hljs-doctag,
+[data-theme='dark'] .preview-content .hljs-keyword,
+[data-theme='dark'] .preview-content .hljs-meta .hljs-keyword,
+[data-theme='dark'] .preview-content .hljs-template-tag,
+[data-theme='dark'] .preview-content .hljs-template-variable,
+[data-theme='dark'] .preview-content .hljs-type,
+[data-theme='dark'] .preview-content .hljs-variable.language_ {
+  color: #ff7b72;
+}
+
+[data-theme='dark'] .preview-content .hljs-title,
+[data-theme='dark'] .preview-content .hljs-title.class_,
+[data-theme='dark'] .preview-content .hljs-title.function_,
+[data-theme='dark'] .preview-content .hljs-title.method_ {
+  color: #d2a8ff;
+}
+
+[data-theme='dark'] .preview-content .hljs-attr,
+[data-theme='dark'] .preview-content .hljs-attribute,
+[data-theme='dark'] .preview-content .hljs-literal,
+[data-theme='dark'] .preview-content .hljs-meta,
+[data-theme='dark'] .preview-content .hljs-number,
+[data-theme='dark'] .preview-content .hljs-operator,
+[data-theme='dark'] .preview-content .hljs-selector-attr,
+[data-theme='dark'] .preview-content .hljs-selector-class,
+[data-theme='dark'] .preview-content .hljs-selector-id,
+[data-theme='dark'] .preview-content .hljs-variable {
+  color: #79c0ff;
+}
+
+[data-theme='dark'] .preview-content .hljs-string,
+[data-theme='dark'] .preview-content .hljs-regexp,
+[data-theme='dark'] .preview-content .hljs-symbol,
+[data-theme='dark'] .preview-content .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+
+[data-theme='dark'] .preview-content .hljs-comment,
+[data-theme='dark'] .preview-content .hljs-code,
+[data-theme='dark'] .preview-content .hljs-formula {
+  color: #8b949e;
+}

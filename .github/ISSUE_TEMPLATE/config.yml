@@ -1,0 +1,6 @@
+name: Config
+description: GitHub issue forms
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/j-abed/marksmith/discussions
+    about: Ask questions or brainstorm ideas before opening an issue

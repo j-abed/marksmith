@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Marksmith — a local Markdown editor where your .md file is the source of truth. Raw, Preview, Split, Hybrid, HTML, and Compare modes."
+    />
+    <meta name="theme-color" content="#08080a" />
+    <meta property="og:title" content="Marksmith" />
+    <meta property="og:url" content="https://j-abed.github.io/marksmith/" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:description"
+      content="Forge your prose. Write in Markdown, preview safely, edit with confidence."
+    />
+    <meta property="og:image" content="assets/app-split.png" />
+    <title>Marksmith — Markdown editor</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="showcase.css" />
+    <script>
+      (function () {
+        var stored = localStorage.getItem('marksmith:showcase-theme')
+        var theme =
+          stored === 'light' || stored === 'dark'
+            ? stored
+            : window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark'
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme
+      })()
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="ambient" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="site-header__inner">
+        <a class="logo" href="./" aria-label="Marksmith home">
+          <img class="logo__icon" src="favicon.svg" width="28" height="28" alt="" />
+          Marksmith
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="#philosophy" data-nav="philosophy">Philosophy</a>
+          <a href="#features" data-nav="features">Features</a>
+          <a href="#modes" data-nav="modes">Modes</a>
+          <a href="https://github.com/j-abed/marksmith/blob/main/docs/architecture.md">Architecture</a>
+          <a href="https://github.com/j-abed/marksmith">GitHub</a>
+          <div class="nav__actions">
+            <button
+              type="button"
+              class="btn btn--ghost btn--sm btn--icon"
+              id="theme-toggle"
+              aria-label="Switch to light theme"
+            >
+              <span class="theme-toggle__icon" aria-hidden="true">☾</span>
+              <span class="theme-toggle__label">Dark</span>
+            </button>
+            <a class="btn btn--primary btn--sm" href="app/">Open editor</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero reveal" aria-labelledby="hero-heading">
+        <p class="hero__eyebrow">Local-first markdown</p>
+        <h1 id="hero-heading">Forge your prose.</h1>
+        <p class="hero__lead">
+          A private editor for technical writing. Markdown stays canonical —
+          preview is derived, sanitized, and never the source of truth.
+        </p>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="app/">Open Marksmith</a>
+          <a class="btn btn--ghost" href="#features">See how it works</a>
+        </div>
+
+        <figure class="hero-shot reveal" aria-labelledby="hero-shot-caption">
+          <div class="hero-shot__frame">
+            <div class="hero-shot__chrome" aria-hidden="true">
+              <div class="hero-shot__dots">
+                <span></span><span></span><span></span>
+              </div>
+              <span class="hero-shot__title" id="hero-shot-window-title">split.md — Marksmith</span>
+            </div>
+            <div class="hero-shot__viewport">
+              <img
+                id="hero-shot-img"
+                src="assets/app-split.png"
+                width="1440"
+                height="900"
+                alt="Marksmith split view with Markdown source on the left and rendered preview on the right"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+          </div>
+          <figcaption id="hero-shot-caption">
+            <ul class="hero-shot__tabs" role="tablist" aria-label="Editor mode screenshots">
+              <li>
+                <button
+                  type="button"
+                  class="hero-shot__tab is-active"
+                  role="tab"
+                  data-shot-tab="split"
+                  aria-selected="true"
+                  aria-controls="hero-shot-img"
+                >
+                  split
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  class="hero-shot__tab"
+                  role="tab"
+                  data-shot-tab="raw"
+                  aria-selected="false"
+                  aria-controls="hero-shot-img"
+                >
+                  raw
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  class="hero-shot__tab"
+                  role="tab"
+                  data-shot-tab="preview"
+                  aria-selected="false"
+                  aria-controls="hero-shot-img"
+                >
+                  preview
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  class="hero-shot__tab"
+                  role="tab"
+                  data-shot-tab="hybrid"
+                  aria-selected="false"
+                  aria-controls="hero-shot-img"
+                >
+                  hybrid
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  class="hero-shot__tab"
+                  role="tab"
+                  data-shot-tab="scroll"
+                  aria-selected="false"
+                  aria-controls="hero-shot-img"
+                >
+                  scroll sync
+                </button>
+              </li>
+            </ul>
+            <p id="carousel-status" class="sr-only" aria-live="polite">
+              Showing split mode
+            </p>
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="pillars reveal" id="philosophy" aria-labelledby="philosophy-heading">
+        <h2 id="philosophy-heading" class="sr-only">Core principles</h2>
+        <article class="pillar">
+          <div class="pillar__rule" aria-hidden="true"></div>
+          <h2>Your words are yours.</h2>
+          <p>
+            Documents live in your browser. Autosave stays on your device — no
+            account, no upload, no server reading your drafts.
+          </p>
+        </article>
+        <article class="pillar">
+          <div class="pillar__rule" aria-hidden="true"></div>
+          <h2>Markdown is canonical.</h2>
+          <p>
+            The editor always holds plain <code>.md</code> text. Hybrid
+            decorations soften syntax visually without rewriting your source.
+          </p>
+        </article>
+        <article class="pillar">
+          <div class="pillar__rule" aria-hidden="true"></div>
+          <h2>Preview is derived.</h2>
+          <p>
+            Rendered HTML flows through <code>rehype-sanitize</code> before it
+            reaches the DOM. Unsafe markup never becomes authoritative state.
+          </p>
+        </article>
+      </section>
+
+      <section class="feature-band reveal" id="features" aria-labelledby="features-heading">
+        <div class="feature-band__inner">
+          <div class="feature-band__copy">
+            <p class="section-label">Split mode</p>
+            <h2 id="features-heading">Edit and preview in parallel</h2>
+            <p>
+              Split mode keeps CodeMirror and a live preview side by side with
+              proportional scroll sync in both directions.
+            </p>
+            <ul>
+              <li>Click preview blocks to jump the editor</li>
+              <li>GFM tables, task lists, and fenced code</li>
+              <li>Syntax highlighting in editor and preview</li>
+            </ul>
+          </div>
+          <div class="feature-band__visual">
+            <img
+              src="assets/app-split-scrolled.png"
+              data-showcase-shot="split-scrolled"
+              width="1440"
+              height="900"
+              alt="Split view with synchronized scroll between Markdown editor and preview"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="feature-band feature-band--reverse reveal" aria-labelledby="sanitize-heading">
+        <div class="feature-band__inner">
+          <div class="feature-band__copy">
+            <p class="section-label">Raw &amp; preview</p>
+            <h2 id="sanitize-heading">Write raw. Read rendered.</h2>
+            <p>
+              Raw mode is a full CodeMirror 6 surface with formatting commands
+              and keyboard shortcuts. Preview mode is read-only output you can
+              trust.
+            </p>
+            <ul>
+              <li>Bold, links, lists, blockquotes, code blocks</li>
+              <li>Copy Markdown or sanitized HTML</li>
+              <li>Export <code>.md</code> anytime</li>
+            </ul>
+          </div>
+          <div class="feature-band__visual">
+            <img
+              src="assets/app-raw.png"
+              data-showcase-shot="raw"
+              width="1440"
+              height="900"
+              alt="Raw editing mode with syntax highlighting and formatting toolbar"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="modes reveal" id="modes" aria-labelledby="modes-heading">
+        <div class="modes__header">
+          <p class="section-label section-label--center">Editor modes</p>
+          <h2 id="modes-heading">Six modes, one document</h2>
+          <p>Switch views without transforming your underlying Markdown string.</p>
+        </div>
+        <div class="modes__grid">
+          <button type="button" class="mode-tile" data-shot-tab="raw">
+            <div class="mode-tile__label">raw</div>
+            <h3>Source editing</h3>
+            <p>CodeMirror with GFM syntax highlighting and toolbar commands.</p>
+          </button>
+          <button type="button" class="mode-tile" data-shot-tab="preview">
+            <div class="mode-tile__label">preview</div>
+            <h3>Rendered output</h3>
+            <p>Sanitized HTML with code highlighting and technical-docs typography.</p>
+          </button>
+          <button type="button" class="mode-tile" data-shot-tab="split">
+            <div class="mode-tile__label">split</div>
+            <h3>Live side-by-side</h3>
+            <p>Edit and preview together with linked scrolling.</p>
+          </button>
+          <button type="button" class="mode-tile" data-shot-tab="hybrid">
+            <div class="mode-tile__label">hybrid</div>
+            <h3>Softened syntax</h3>
+            <p>Prototype decorations for headings, emphasis, code, and links.</p>
+          </button>
+          <a class="mode-tile mode-tile--link" href="app/">
+            <div class="mode-tile__label">html</div>
+            <h3>Edit rendered HTML</h3>
+            <p>Import LLM output; edits round-trip to canonical Markdown.</p>
+          </a>
+          <a class="mode-tile mode-tile--link" href="app/">
+            <div class="mode-tile__label">compare</div>
+            <h3>Markdown ↔ HTML</h3>
+            <p>Side-by-side diff, scroll sync, and sync/apply actions.</p>
+          </a>
+        </div>
+      </section>
+
+      <section class="cta reveal" aria-labelledby="cta-heading">
+        <div class="cta__panel">
+          <h2 id="cta-heading">Start writing in your browser</h2>
+          <p>
+            Free and open source under MIT. No sign-up. Install as a PWA from the
+            editor for a dock icon and offline shell.
+          </p>
+          <div class="cta__actions">
+            <a class="btn btn--primary" href="app/">Launch Marksmith</a>
+            <a class="btn btn--ghost" href="https://github.com/j-abed/marksmith">View on GitHub</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Marksmith · MIT ·
+        <a href="https://github.com/j-abed/marksmith">Source</a> ·
+        <a href="https://github.com/j-abed/marksmith/blob/main/CONTRIBUTING.md">Contributing</a> ·
+        <a href="https://github.com/j-abed/marksmith/blob/main/docs/architecture.md">Architecture</a>
+      </p>
+      <p>React · CodeMirror 6 · unified / remark / rehype</p>
+      <p class="made-in-nyc">
+        made with <span class="made-in-nyc__heart" aria-hidden="true">♥</span> in New York, NY
+        <svg
+          class="made-in-nyc__flag"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 19 10"
+          width="14"
+          height="10"
+          aria-hidden="true"
+        >
+          <rect width="19" height="10" fill="#b22234" />
+          <path
+            fill="#fff"
+            d="M0 1.54h19V3.08H0V4.62h19V6.15H0V7.69h19V10H0V1.54z"
+          />
+          <rect width="8" height="5.38" fill="#3c3b6e" />
+        </svg>
+      </p>
+    </footer>
+
+    <script src="showcase.js" defer></script>
+  </body>
+</html>
