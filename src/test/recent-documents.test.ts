@@ -70,6 +70,16 @@ describe('recentDocuments', () => {
     )
   })
 
+  it('formatRecentDescription notes YAML metadata', () => {
+    const entry = addRecentDocument({
+      title: 'Brief',
+      markdown: '---\ntitle: Brief\n---\n\n# Hi',
+    })[0]!
+    expect(formatRecentDescription(entry, 'Jun 26')).toBe(
+      'Jun 26 · YAML metadata',
+    )
+  })
+
   it('preserves id and mode when updating a recent entry', () => {
     const [first] = addRecentDocument({
       title: 'Notes',

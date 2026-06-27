@@ -4,11 +4,13 @@ import { test, expect, type Page } from '@playwright/test'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const fixturePath = path.join(__dirname, 'fixtures', 'open-me.md')
+const yamlFixturePath = path.join(__dirname, 'fixtures', 'yaml-brief.md')
 
 async function gotoFresh(page: Page) {
   await page.addInitScript(() => {
     localStorage.removeItem('marksmith:draft')
     localStorage.removeItem('marksmith:doc-modes')
+    localStorage.removeItem('marksmith:doc-sidebar')
     localStorage.removeItem('marksmith:recent')
   })
   await page.goto('/')
@@ -278,6 +280,68 @@ test.describe('frontmatter panel', () => {
     await expect(page.locator('.cm-content')).toContainText('title: Launch Brief')
     await expect(page.locator('.cm-content')).toContainText('date: 2026-06-26')
     await expect(page.locator('.cm-content')).toContainText('- docs')
+  })
+})
+
+test.describe('frontmatter metadata UX', () => {
+  test('uses yaml title when opening a file', async ({ page }) => {
+    await gotoFresh(page)
+
+    await page.getByTestId('file-open-input').setInputFiles(yamlFixturePath)
+
+    await expect(page.getByLabel('Document title')).toHaveValue('Project Brief')
+    await expect(page.locator('.cm-content')).toContainText('title: Project Brief')
+    await expect(page.getByRole('status')).toContainText('Opened yaml-brief')
+  })
+
+  test('recent list notes yaml metadata', async ({ page }) => {
+    await gotoFresh(page)
+
+    await page.getByTestId('file-open-input').setInputFiles(yamlFixturePath)
+    await expect(page.getByLabel('Document title')).toHaveValue('Project Brief')
+
+    await page.getByRole('button', { name: /^File/ }).click()
+    const recentItem = page
+      .getByRole('menuitem')
+      .filter({ hasText: 'yaml-brief.md' })
+    await expect(recentItem).toBeVisible()
+    await expect(recentItem.locator('.top-bar-menu__item-desc')).toContainText(
+      'YAML metadata',
+    )
+  })
+
+  test('restores sidebar tab when reopening from recent', async ({ page }) => {
+    await gotoFresh(page)
+
+    await page.getByTestId('file-open-input').setInputFiles(yamlFixturePath)
+    await expect(page.getByLabel('Document title')).toHaveValue('Project Brief')
+
+    const sidebar = page.locator('.document-sidebar')
+    await expect(sidebar).toBeVisible()
+    await expect(page.getByTestId('frontmatter-panel')).toBeVisible()
+
+    await sidebar.getByRole('tab', { name: 'Outline' }).click()
+    await expect(sidebar.getByRole('tab', { name: 'Outline' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    await page.getByRole('button', { name: /^File/ }).click()
+    await page.getByRole('menuitem').filter({ hasText: 'New document' }).click()
+    await expect(page.getByLabel('Document title')).toHaveValue('Untitled')
+    await expect(sidebar).toHaveCount(0)
+
+    await page.getByRole('button', { name: /^File/ }).click()
+    await page.getByRole('menuitem').filter({ hasText: 'yaml-brief.md' }).click()
+
+    await expect(page.getByLabel('Document title')).toHaveValue('Project Brief')
+    await expect(sidebar).toBeVisible()
+    await expect(sidebar.getByRole('tab', { name: 'Outline' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    await expect(sidebar.getByRole('button', { name: 'Body' })).toBeVisible()
+    await expect(page.getByTestId('frontmatter-panel')).toHaveCount(0)
   })
 })
 

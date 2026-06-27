@@ -68,4 +68,8 @@ describe('frontmatter', () => {
     expect(setFrontmatterTitle(md, 'New')).toContain('title: New')
     expect(setFrontmatterTitle('# Body', 'New')).toBe('# Body')
   })
+
+  it('parses comma-separated tags input', () => {
+    expect(parseTagsInput('one, two, three')).toEqual(['one', 'two', 'three'])
+  })
 })
