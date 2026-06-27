@@ -236,6 +236,17 @@ test.describe('keyboard shortcuts help', () => {
   })
 })
 
+test.describe('install app', () => {
+  test('shows in View menu on Chrome', async ({ page }) => {
+    await gotoFresh(page)
+
+    await page.getByRole('button', { name: /^View/ }).click()
+    await expect(
+      page.getByRole('menuitem').filter({ hasText: 'Install app' }),
+    ).toBeVisible()
+  })
+})
+
 test.describe('confirm dialog', () => {
   test('blocks new document until discard is confirmed', async ({ page }) => {
     await gotoFresh(page)
