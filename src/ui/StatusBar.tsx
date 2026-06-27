@@ -3,6 +3,7 @@ import type { SaveStatus } from '../app/appState'
 import { getInstallFooterHint } from '../app/installAppHelp'
 import { useInstallPrompt } from '../app/useInstallPrompt'
 import { InstallAppDialog } from './InstallAppDialog'
+import { BuyMeCoffeeLink } from './BuyMeCoffeeLink'
 import { MadeInNyc } from './MadeInNyc'
 
 type StatusBarProps = {
@@ -45,17 +46,20 @@ export function StatusBar({
       </span>
       <span className="status-bar__stat">{wordCount} words</span>
       <span className="status-bar__stat">{headingCount} headings</span>
-      {showInstallInFooter && (
-        <button
-          type="button"
-          className="status-bar__install"
-          onClick={() => setInstallOpen(true)}
-          title="How to install Marksmith as an app"
-        >
-          {getInstallFooterHint(import.meta.env.PROD)}
-        </button>
-      )}
-      <MadeInNyc className="status-bar__credit" />
+      <div className="status-bar__end">
+        {showInstallInFooter && (
+          <button
+            type="button"
+            className="status-bar__install"
+            onClick={() => setInstallOpen(true)}
+            title="How to install Marksmith as an app"
+          >
+            {getInstallFooterHint(import.meta.env.PROD)}
+          </button>
+        )}
+        <BuyMeCoffeeLink className="status-bar__support" />
+        <MadeInNyc className="status-bar__credit" />
+      </div>
       <InstallAppDialog open={installOpen} onClose={() => setInstallOpen(false)} />
     </footer>
   )

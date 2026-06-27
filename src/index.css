@@ -906,11 +906,32 @@ body.is-split-resizing {
 }
 
 .status-bar__credit {
+  margin-left: 0;
+}
+
+.status-bar__end {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   margin-left: auto;
 }
 
+.support-link {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.65;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.support-link:hover {
+  opacity: 1;
+  color: var(--text);
+  text-decoration: underline;
+}
+
 .status-bar__install {
-  margin-left: auto;
+  margin-left: 0;
   padding: 0 10px;
   border: none;
   background: none;
@@ -926,10 +947,6 @@ body.is-split-resizing {
   opacity: 1;
   color: var(--text);
   text-decoration: underline;
-}
-
-.status-bar__install + .status-bar__credit {
-  margin-left: 12px;
 }
 
 .made-in-nyc {
@@ -1096,10 +1113,15 @@ body.is-split-resizing {
     clip: rect(0, 0, 0, 0);
   }
 
-  .status-bar__credit {
+  .status-bar__end {
     width: 100%;
     margin-left: 0;
     padding-top: 4px;
     justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .status-bar__credit {
+    margin-left: 0;
   }
 }

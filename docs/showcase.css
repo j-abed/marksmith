@@ -803,6 +803,35 @@ code {
   margin: 0 0 8px;
 }
 
+.site-footer__meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 0 !important;
+}
+
+.footer__bmc {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  opacity: 0.9;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.footer__bmc:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.footer__bmc img {
+  display: block;
+  height: 28px;
+  width: auto;
+  border-radius: 6px;
+}
+
 .made-in-nyc {
   display: inline-flex;
   align-items: center;
