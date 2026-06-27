@@ -32,6 +32,16 @@ import {
   type LinkedFileFormat,
 } from '../documents/fileAccess'
 import {
+  openDocumentFromPath,
+  openDocumentWithDesktopDialog,
+  saveDesktopLinkedFile,
+  saveHtmlAsWithDesktopDialog,
+  saveMarkdownAsWithDesktopDialog,
+  desktopSourceName,
+} from '../documents/desktopFileAccess'
+import { isTauri } from '../platform/desktop'
+import { useTauriOpenFiles } from '../platform/useTauriOpenFiles'
+import {
   addRecentDocument,
   clearRecentDocuments,
   loadRecentDocuments,
@@ -129,21 +139,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const hydrated = useRef(false)
   const lastSavedSnapshot = useRef<string | null>(null)
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null)
+  const linkedPathRef = useRef<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const confirmResolverRef = useRef<((confirmed: boolean) => void) | null>(null)
   const sourceNameRef = useRef<string | undefined>(undefined)
   const linkedFileFormatRef = useRef<LinkedFileFormat | null>(null)
 
   const syncLinkedFile = useCallback(
-    (handle: FileSystemFileHandle | null, sourceName?: string) => {
+    (
+      handle: FileSystemFileHandle | null,
+      sourceName?: string,
+      path?: string | null,
+    ) => {
       fileHandleRef.current = handle
-      setHasFileHandle(handle !== null)
+      linkedPathRef.current = path ?? null
+      setHasFileHandle(handle !== null || linkedPathRef.current !== null)
       sourceNameRef.current = sourceName
       setLinkedFileName(sourceName ?? null)
-      if (handle && sourceName) {
-        const format = detectLinkedFileFormat(sourceName)
-        linkedFileFormatRef.current = format
-        setLinkedFileFormat(format)
+      if ((handle && sourceName) || linkedPathRef.current) {
+        const name = sourceName ?? sourceNameRef.current
+        if (name) {
+          const format = detectLinkedFileFormat(name)
+          linkedFileFormatRef.current = format
+          setLinkedFileFormat(format)
+        }
       } else {
         linkedFileFormatRef.current = null
         setLinkedFileFormat(null)
@@ -189,18 +208,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sourceName?: string,
       importedFromHtml?: boolean,
       mode?: EditorMode,
+      documentId?: string,
     ) => {
       setRecentDocuments(
         addRecentDocument({
           title,
           markdown,
           sourceName,
+          documentId: sourceName ? undefined : documentId,
           importedFromHtml,
           mode,
         }),
       )
     },
     [],
+  )
+
+  const snapshotDraftToRecent = useCallback(
+    (
+      title: string,
+      markdown: string,
+      mode: EditorMode,
+      documentId: string,
+    ) => {
+      if (!markdown.trim()) return
+      if (fileHandleRef.current || linkedPathRef.current) return
+      recordRecent(title, markdown, undefined, undefined, mode, documentId)
+    },
+    [recordRecent],
   )
 
   const applyLoadedDocument = useCallback(
@@ -270,6 +305,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return
         }
 
+        if (isTauri()) {
+          try {
+            const opened = await openDocumentWithDesktopDialog()
+            if (!opened) {
+              onResult(null)
+              return
+            }
+            applyLoadedDocument(
+              opened.title,
+              opened.markdown,
+              null,
+              opened.sourceName,
+              opened.convertedFromHtml,
+            )
+            syncLinkedFile(null, opened.sourceName, opened.path)
+            const msg = importNotice(
+              opened.title,
+              opened.convertedFromHtml,
+            )
+            setNotice(msg)
+            onResult(msg)
+          } catch (err) {
+            onResult(err instanceof Error ? err.message : 'Open failed')
+          }
+          return
+        }
+
         if (supportsFileSystemAccess()) {
           try {
             const picked = await openMarkdownWithPicker()
@@ -305,6 +367,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [applyLoadedDocument, requestDiscardConfirm],
   )
 
+  const openDocumentFromPaths = useCallback(
+    async (paths: string[]) => {
+      const path = paths[0]
+      if (!path) return
+      if (!(await requestDiscardConfirm())) return
+
+      try {
+        const opened = await openDocumentFromPath(path)
+        applyLoadedDocument(
+          opened.title,
+          opened.markdown,
+          null,
+          opened.sourceName,
+          opened.convertedFromHtml,
+        )
+        syncLinkedFile(null, opened.sourceName, opened.path)
+        setNotice(
+          importNotice(opened.title, opened.convertedFromHtml),
+        )
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'Open failed')
+      }
+    },
+    [applyLoadedDocument, requestDiscardConfirm, syncLinkedFile],
+  )
+
+  const handleTauriBootstrapComplete = useCallback((openedAny: boolean) => {
+    if (!openedAny) {
+      const draft = loadDraft()
+      if (draft?.document) {
+        const title = resolveDocumentTitle(
+          draft.document.markdown,
+          draft.document.title,
+        )
+        dispatch({
+          type: 'restoreDocument',
+          document: { ...draft.document, title, dirty: false },
+          mode: draft.mode as EditorMode | undefined,
+          theme: draft.theme as Theme | undefined,
+        })
+      }
+    }
+    hydrated.current = true
+  }, [])
+
+  useTauriOpenFiles(openDocumentFromPaths, handleTauriBootstrapComplete)
+
   const openRecentDocument = useCallback(
     async (id: string): Promise<string | null> => {
       const entry = recentDocuments.find((doc) => doc.id === id)
@@ -335,6 +444,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const newDocument = useCallback(async (): Promise<string | null> => {
     if (!(await requestDiscardConfirm())) return null
+    snapshotDraftToRecent(
+      state.document.title,
+      state.document.markdown,
+      state.mode,
+      state.document.id,
+    )
     sourceNameRef.current = undefined
     syncLinkedFile(null)
     const mode = resolveStoredMode({ title: 'Untitled' }, 'raw')
@@ -343,24 +458,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const msg = 'New document'
     setNotice(msg)
     return msg
-  }, [requestDiscardConfirm, syncLinkedFile])
+  }, [
+    requestDiscardConfirm,
+    snapshotDraftToRecent,
+    state.document.id,
+    state.document.markdown,
+    state.document.title,
+    state.mode,
+    syncLinkedFile,
+  ])
 
   const saveFile = useCallback(async (): Promise<string | null> => {
     const handle = fileHandleRef.current
+    const path = linkedPathRef.current
     const format = linkedFileFormatRef.current
-    if (!handle || !format) {
+    if (!format || (!handle && !path)) {
       return 'Use Save As to choose a file first'
     }
 
     try {
-      const saved = await saveLinkedFile(
-        state.document.title,
-        state.document.markdown,
-        handle,
-        format,
-      )
-      fileHandleRef.current = saved
-      setHasFileHandle(true)
+      if (path && isTauri()) {
+        await saveDesktopLinkedFile(
+          path,
+          state.document.title,
+          state.document.markdown,
+          format,
+        )
+      } else if (handle) {
+        const saved = await saveLinkedFile(
+          state.document.title,
+          state.document.markdown,
+          handle,
+          format,
+        )
+        fileHandleRef.current = saved
+        setHasFileHandle(true)
+      } else {
+        return 'Use Save As to choose a file first'
+      }
+
       dispatch({
         type: 'markSaved',
         savedAt: new Date().toISOString(),
@@ -381,6 +517,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const saveFileAs = useCallback(async (): Promise<string | null> => {
     try {
+      if (isTauri()) {
+        const path = await saveMarkdownAsWithDesktopDialog(
+          state.document.title,
+          state.document.markdown,
+        )
+        if (!path) return null
+        const sourceName = await desktopSourceName(path)
+        const previousKey = documentModeKey({
+          sourceName: sourceNameRef.current,
+          title: state.document.title,
+        })
+        syncLinkedFile(null, sourceName, path)
+        migrateDocumentModeKey(
+          previousKey,
+          documentModeKey({
+            sourceName,
+            title: state.document.title,
+          }),
+        )
+        dispatch({
+          type: 'markSaved',
+          savedAt: new Date().toISOString(),
+        })
+        recordRecent(
+          state.document.title,
+          state.document.markdown,
+          sourceName,
+          undefined,
+          state.mode,
+        )
+        return 'Saved to file'
+      }
+
       const handle = await saveMarkdownAsWithPicker(
         state.document.title,
         state.document.markdown,
@@ -419,6 +588,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const saveFileAsHtml = useCallback(async (): Promise<string | null> => {
     try {
+      if (isTauri()) {
+        const path = await saveHtmlAsWithDesktopDialog(
+          state.document.title,
+          state.document.markdown,
+        )
+        if (!path) return null
+        const sourceName = await desktopSourceName(path)
+        syncLinkedFile(null, sourceName, path)
+        dispatch({
+          type: 'markSaved',
+          savedAt: new Date().toISOString(),
+        })
+        recordRecent(
+          state.document.title,
+          state.document.markdown,
+          sourceName,
+          undefined,
+          state.mode,
+        )
+        return 'Saved HTML to file'
+      }
+
       const handle = await saveHtmlAsWithPicker(
         state.document.title,
         state.document.markdown,
@@ -446,6 +637,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [recordRecent, state.document.markdown, state.document.title, state.mode])
 
   useEffect(() => {
+    if (isTauri()) return
+
     const draft = loadDraft()
     if (draft?.document) {
       const title = resolveDocumentTitle(
@@ -499,11 +692,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     saveTimer.current = setTimeout(() => {
+      const { document, mode, theme } = state
       saveDraft({
-        document: { ...state.document, dirty: false },
-        mode: state.mode,
-        theme: state.theme,
+        document: { ...document, dirty: false },
+        mode,
+        theme,
       })
+      snapshotDraftToRecent(
+        document.title,
+        document.markdown,
+        mode,
+        document.id,
+      )
       lastSavedSnapshot.current = snapshot
       dispatch({
         type: 'markSaved',
@@ -515,9 +715,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (saveTimer.current) clearTimeout(saveTimer.current)
     }
   }, [
+    snapshotDraftToRecent,
+    state.document.dirty,
+    state.document.id,
     state.document.markdown,
     state.document.title,
-    state.document.dirty,
     state.mode,
     state.theme,
   ])

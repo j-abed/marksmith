@@ -68,6 +68,8 @@ export function App() {
     hasFrontmatterMetadata,
     loadSidebarPrefs,
     saveSidebarPrefs,
+    canSaveToDisk,
+    linkedFileName,
   } = useApp()
   const editorRef = useRef<EditorView | null>(null)
   const { mode, document: doc, saveStatus, zenMode } = state
@@ -299,6 +301,8 @@ export function App() {
       {!zenMode && (
         <StatusBar
           saveStatus={saveStatus}
+          linkedToDisk={canSaveToDisk}
+          linkedFileName={linkedFileName}
           wordCount={wordCount}
           headingCount={headingCount}
         />

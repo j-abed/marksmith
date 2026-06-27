@@ -1,0 +1,29 @@
+[package]
+name = "marksmith"
+version = "0.2.0"
+description = "Local-first Markdown editor"
+authors = ["Jason Abed"]
+license = "MIT"
+repository = "https://github.com/j-abed/marksmith"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "marksmith_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
+tauri = { version = "2.11.3", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-log = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-opener = "2"
+percent-encoding = "2"
+url = "2"

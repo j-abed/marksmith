@@ -15,6 +15,8 @@ npm run dev
 
 Open **http://127.0.0.1:5173**.
 
+For the **native desktop** shell, install [Rust](https://rustup.rs/) and run `npm run tauri:dev` — see [docs/TAURI.md](./docs/TAURI.md). Web-only changes do not require Rust.
+
 Run the full test suite before opening a pull request:
 
 ```bash

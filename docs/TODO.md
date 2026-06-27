@@ -29,10 +29,11 @@ Tracked follow-ups for Marksmith. See [architecture.md](./architecture.md) for d
 - [x] Title ↔ frontmatter sync (YAML `title` on open; top bar updates existing YAML)
 - [x] Compare mode auto-sync toggle (inspect diffs without silent round-trip)
 - [x] Per-document sidebar restore (outline/frontmatter tab + open state)
+- [x] Native desktop wrapper (Tauri) — `.md` / `.html` file associations, Open With (cold + warm), native dialogs, draft → Recent ([docs/TAURI.md](./TAURI.md))
 
 ## Medium term
 
-- [ ] Native desktop wrapper (Tauri or Electron) for `.md` file associations and true dock icon without browser chrome
+- [ ] Desktop polish — window title from filename, native macOS menu bar
 
 ## Long term
 
@@ -62,26 +63,22 @@ Other useful commands:
 | `npm run build:pages` | Build the GitHub Pages bundle into `docs/app/` |
 | `npx serve docs` | Preview showcase + app at `http://localhost:3000/` |
 | `npm run test:all` | Unit + end-to-end tests |
+| `npm run tauri:dev` | Native desktop development (requires Rust; see [TAURI.md](./TAURI.md)) |
+| `npm run tauri:build` | Production desktop bundle |
 
-No API keys or backend are required — the app runs entirely in the browser.
+No API keys or backend are required — the app runs entirely in the browser (or in the Tauri shell for desktop builds).
 
 See [PUBLISHING.md](./PUBLISHING.md) for GitHub Pages setup and [CONTRIBUTING.md](../CONTRIBUTING.md) for development workflow.
 
 ### Install as an app (stay local permanently)
 
-You do **not** need a native rewrite to run Marksmith like a desktop app. The production build is a **Progressive Web App (PWA)** you can install to your dock, taskbar, or home screen:
+**PWA (browser):** install from a production build to your dock, taskbar, or home screen:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-Open **http://127.0.0.1:4173**, then use **View → Install app…** (Chrome/Edge) or the browser’s **Install** / **Add to Dock** control (Safari on macOS).
+Open **http://127.0.0.1:4173**, then **View → Install app…** (Chrome/Edge) or **Add to Dock** (Safari on macOS). Offline shell after first load; same local-only editing.
 
-What you get:
-
-- Standalone window without browser tabs
-- Offline shell after first load (cached assets)
-- Same local-only editing — still no backend
-
-What a PWA does **not** give you (yet): opening `.md` files from Finder by double-click, or a guaranteed menu-bar icon on every OS. For that, a future **[Tauri](https://tauri.app/)** or Electron wrapper is the natural next step — the editor itself stays the same web app.
+**Native desktop (Tauri):** for Finder **Open With**, file associations, and native save dialogs — see [TAURI.md](./TAURI.md) (`npm run tauri:build`). The React editor is unchanged; only the shell differs from the PWA.

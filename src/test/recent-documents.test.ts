@@ -95,6 +95,26 @@ describe('recentDocuments', () => {
     expect(updated?.mode).toBe('compare')
   })
 
+  it('keeps separate untitled drafts when document ids differ', () => {
+    addRecentDocument({
+      title: 'Untitled',
+      markdown: '# First',
+      documentId: 'draft-a',
+    })
+    addRecentDocument({
+      title: 'Untitled',
+      markdown: '# Second',
+      documentId: 'draft-b',
+    })
+
+    const recent = loadRecentDocuments()
+    expect(recent).toHaveLength(2)
+    expect(recent.map((entry) => entry.markdown).sort()).toEqual([
+      '# First',
+      '# Second',
+    ])
+  })
+
   it('updates mode on an existing recent entry', () => {
     addRecentDocument({ title: 'Notes', markdown: '# One' })
     updateRecentDocumentMode({ title: 'Notes', mode: 'preview' })

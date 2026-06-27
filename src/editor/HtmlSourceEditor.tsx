@@ -12,6 +12,8 @@ import { html } from '@codemirror/lang-html'
 import { search, searchKeymap } from '@codemirror/search'
 import { createEditorTheme } from './editorTheme'
 
+const EMPTY_EXTENSIONS: Extension[] = []
+
 type HtmlSourceEditorProps = {
   value: string
   onChange: (value: string) => void
@@ -27,7 +29,7 @@ export function HtmlSourceEditor({
   value,
   onChange,
   showLineNumbers = true,
-  extraExtensions = [],
+  extraExtensions = EMPTY_EXTENSIONS,
   appKeymap,
   editorRef,
   scrollKey,
