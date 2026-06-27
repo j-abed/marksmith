@@ -78,8 +78,8 @@ export type AppAction =
   | { type: 'setSaveStatus'; saveStatus: SaveStatus }
   | { type: 'markSaved'; savedAt: string }
   | { type: 'restoreDocument'; document: MarkdownDocument; mode?: EditorMode; theme?: Theme }
-  | { type: 'loadDocument'; title: string; markdown: string }
-  | { type: 'newDocument' }
+  | { type: 'loadDocument'; title: string; markdown: string; mode?: EditorMode }
+  | { type: 'newDocument'; mode?: EditorMode }
   | { type: 'toggleZenMode' }
   | { type: 'setZenMode'; zenMode: boolean }
 
@@ -146,6 +146,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           markdown: action.markdown,
           dirty: false,
         }),
+        mode: action.mode ?? state.mode,
         saveStatus: 'saved',
       }
     case 'newDocument':
@@ -156,6 +157,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           markdown: '',
           dirty: false,
         }),
+        mode: action.mode ?? 'raw',
         saveStatus: 'saved',
       }
     case 'toggleZenMode':

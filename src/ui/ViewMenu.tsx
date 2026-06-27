@@ -3,7 +3,9 @@ import { TopBarMenu, type TopBarMenuItem } from './TopBarMenu'
 
 type ViewMenuProps = {
   outlineOpen: boolean
+  frontmatterOpen: boolean
   onToggleOutline: () => void
+  onToggleFrontmatter: () => void
   onOpenShortcuts: () => void
   canInstallApp: boolean
   onInstallApp: () => void
@@ -11,7 +13,9 @@ type ViewMenuProps = {
 
 export function ViewMenu({
   outlineOpen,
+  frontmatterOpen,
   onToggleOutline,
+  onToggleFrontmatter,
   onOpenShortcuts,
   canInstallApp,
   onInstallApp,
@@ -23,6 +27,12 @@ export function ViewMenu({
         label: outlineOpen ? 'Hide outline' : 'Show outline',
         description: 'Jump to document headings',
         onSelect: onToggleOutline,
+      },
+      {
+        id: 'frontmatter',
+        label: frontmatterOpen ? 'Hide frontmatter' : 'Show frontmatter',
+        description: 'Edit YAML title, date, and tags',
+        onSelect: onToggleFrontmatter,
       },
       {
         id: 'shortcuts',
@@ -43,7 +53,15 @@ export function ViewMenu({
     }
 
     return menu
-  }, [canInstallApp, onInstallApp, onOpenShortcuts, onToggleOutline, outlineOpen])
+  }, [
+    canInstallApp,
+    frontmatterOpen,
+    onInstallApp,
+    onOpenShortcuts,
+    onToggleFrontmatter,
+    onToggleOutline,
+    outlineOpen,
+  ])
 
   return <TopBarMenu label="View" items={items} />
 }

@@ -9,15 +9,17 @@ import { EditorModePanel } from '../editor/EditorModePanel'
 import { preloadSecondaryModes } from '../editor/modePreload'
 import { scrollEditorToLine } from '../editor/scrollSync'
 import { FormattingToolbar } from '../editor/FormattingToolbar'
-import { OutlineSidebar } from '../ui/OutlineSidebar'
+import { DocumentSidebar, type DocumentSidebarTab } from '../ui/DocumentSidebar'
+import { applyFrontmatter, type FrontmatterFields } from '../markdown/frontmatter'
 import { StatusBar } from '../ui/StatusBar'
 import { KeyboardShortcutsDialog } from '../ui/KeyboardShortcutsDialog'
 import { TopBar } from '../ui/TopBar'
 import { ZenExitButton } from '../ui/ZenExitButton'
 
 const OUTLINE_OPEN_KEY = 'marksmith:outline-open'
+const SIDEBAR_TAB_KEY = 'marksmith:sidebar-tab'
 
-function loadOutlineOpen(): boolean {
+function loadSidebarOpen(): boolean {
   try {
     return localStorage.getItem(OUTLINE_OPEN_KEY) === '1'
   } catch {
@@ -25,9 +27,27 @@ function loadOutlineOpen(): boolean {
   }
 }
 
-function saveOutlineOpen(open: boolean): void {
+function saveSidebarOpen(open: boolean): void {
   try {
     localStorage.setItem(OUTLINE_OPEN_KEY, open ? '1' : '0')
+  } catch {
+    // ignore
+  }
+}
+
+function loadSidebarTab(): DocumentSidebarTab {
+  try {
+    return localStorage.getItem(SIDEBAR_TAB_KEY) === 'frontmatter'
+      ? 'frontmatter'
+      : 'outline'
+  } catch {
+    return 'outline'
+  }
+}
+
+function saveSidebarTab(tab: DocumentSidebarTab): void {
+  try {
+    localStorage.setItem(SIDEBAR_TAB_KEY, tab)
   } catch {
     // ignore
   }
@@ -37,6 +57,7 @@ export function App() {
   const {
     state,
     setMarkdown,
+    setTitle,
     toggleZenMode,
     loadFromFile,
     outline,
@@ -47,7 +68,8 @@ export function App() {
   const editorRef = useRef<EditorView | null>(null)
   const { mode, document: doc, saveStatus, zenMode } = state
   const [dragOver, setDragOver] = useState(false)
-  const [outlineOpen, setOutlineOpen] = useState(loadOutlineOpen)
+  const [sidebarOpen, setSidebarOpen] = useState(loadSidebarOpen)
+  const [sidebarTab, setSidebarTab] = useState<DocumentSidebarTab>(loadSidebarTab)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   const openFind = useCallback(() => {
@@ -87,7 +109,7 @@ export function App() {
   )
 
   const showFormatting = !zenMode && (mode === 'raw' || mode === 'hybrid')
-  const showOutline = outlineOpen && !zenMode
+  const showSidebar = sidebarOpen && !zenMode
 
   useEffect(() => {
     const preload = () => preloadSecondaryModes()
@@ -99,13 +121,46 @@ export function App() {
     return () => clearTimeout(timer)
   }, [])
 
-  const toggleOutline = useCallback(() => {
-    setOutlineOpen((open) => {
-      const next = !open
-      saveOutlineOpen(next)
-      return next
-    })
+  const openSidebar = useCallback((tab: DocumentSidebarTab) => {
+    setSidebarTab(tab)
+    saveSidebarTab(tab)
+    setSidebarOpen(true)
+    saveSidebarOpen(true)
   }, [])
+
+  const toggleOutline = useCallback(() => {
+    if (sidebarOpen && sidebarTab === 'outline') {
+      setSidebarOpen(false)
+      saveSidebarOpen(false)
+      return
+    }
+    openSidebar('outline')
+  }, [openSidebar, sidebarOpen, sidebarTab])
+
+  const toggleFrontmatter = useCallback(() => {
+    if (sidebarOpen && sidebarTab === 'frontmatter') {
+      setSidebarOpen(false)
+      saveSidebarOpen(false)
+      return
+    }
+    openSidebar('frontmatter')
+  }, [openSidebar, sidebarOpen, sidebarTab])
+
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false)
+    saveSidebarOpen(false)
+  }, [])
+
+  const handleFrontmatterApply = useCallback(
+    (fields: FrontmatterFields) => {
+      const nextMarkdown = applyFrontmatter(doc.markdown, fields)
+      setMarkdown(nextMarkdown)
+      if (fields.title?.trim()) {
+        setTitle(fields.title.trim())
+      }
+    },
+    [doc.markdown, setMarkdown, setTitle],
+  )
 
   const jumpToHeading = useCallback(
     (line: number) => {
@@ -172,8 +227,10 @@ export function App() {
       {!zenMode && (
         <TopBar
           editorRef={editorRef}
-          outlineOpen={outlineOpen}
+          outlineOpen={sidebarOpen && sidebarTab === 'outline'}
+          frontmatterOpen={sidebarOpen && sidebarTab === 'frontmatter'}
           onToggleOutline={toggleOutline}
+          onToggleFrontmatter={toggleFrontmatter}
           onFind={openFind}
           onReplace={openReplace}
           onOpenShortcuts={openShortcutsHelp}
@@ -192,11 +249,15 @@ export function App() {
         />
       )}
       <div className="app-body">
-        {showOutline && (
-          <OutlineSidebar
+        {showSidebar && (
+          <DocumentSidebar
+            tab={sidebarTab}
+            onTabChange={openSidebar}
+            onClose={closeSidebar}
             headings={outline}
+            markdown={doc.markdown}
             onSelectLine={jumpToHeading}
-            onClose={toggleOutline}
+            onFrontmatterApply={handleFrontmatterApply}
           />
         )}
         <main className="app-main" id="editor-panel" role="tabpanel">

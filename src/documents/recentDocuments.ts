@@ -5,6 +5,7 @@ export type RecentDocument = {
   markdown: string
   openedAt: string
   importedFromHtml?: boolean
+  mode?: string
 }
 
 export const RECENT_DOCUMENTS_KEY = 'marksmith:recent'
@@ -41,7 +42,7 @@ export function saveRecentDocuments(entries: RecentDocument[]): void {
 
 function isSameRecent(
   entry: RecentDocument,
-  input: { title: string; markdown: string; sourceName?: string },
+  input: { title: string; markdown?: string; sourceName?: string },
 ): boolean {
   if (input.sourceName || entry.sourceName) {
     return input.sourceName === entry.sourceName
@@ -54,20 +55,23 @@ export function addRecentDocument(input: {
   markdown: string
   sourceName?: string
   importedFromHtml?: boolean
+  mode?: string
 }): RecentDocument[] {
   const title = input.title.trim() || 'Untitled'
   const existing = loadRecentDocuments()
   const prior = existing.find((entry) => isSameRecent(entry, input))
   const importedFromHtml =
     input.importedFromHtml ?? prior?.importedFromHtml ?? false
+  const mode = input.mode ?? prior?.mode
 
   const nextEntry: RecentDocument = {
-    id: crypto.randomUUID(),
+    id: prior?.id ?? crypto.randomUUID(),
     title,
     sourceName: input.sourceName,
     markdown: input.markdown,
     openedAt: new Date().toISOString(),
     importedFromHtml,
+    mode,
   }
 
   const filtered = existing.filter((entry) => !isSameRecent(entry, input))
@@ -83,6 +87,20 @@ export function clearRecentDocuments(): void {
   } catch {
     // ignore
   }
+}
+
+export function updateRecentDocumentMode(input: {
+  title: string
+  sourceName?: string
+  mode: string
+}): RecentDocument[] {
+  const docs = loadRecentDocuments()
+  const index = docs.findIndex((entry) => isSameRecent(entry, input))
+  if (index === -1) return docs
+  const next = [...docs]
+  next[index] = { ...next[index], mode: input.mode }
+  saveRecentDocuments(next)
+  return next
 }
 
 export function formatRecentLabel(entry: RecentDocument): string {

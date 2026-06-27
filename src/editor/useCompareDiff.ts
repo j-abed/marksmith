@@ -2,30 +2,37 @@ import { useEffect, useState } from 'react'
 import { htmlToMarkdown } from '../markdown/importContent'
 import { renderMarkdownToHtml } from '../markdown/renderMarkdown'
 import {
-  computeDiffLineIndices,
+  computeCompareDiff,
+  type CompareDiffResult,
   textsEqual,
 } from './compareDiff'
 
 const ROUND_TRIP_DEBOUNCE_MS = 400
+
+const emptyDiff: CompareDiffResult = {
+  fullLines: [],
+  wordSpans: [],
+  touchedLines: [],
+}
 
 export function useCompareDiff(
   markdown: string,
   html: string,
   ready: boolean,
 ) {
-  const [diffLines, setDiffLines] = useState<number[]>([])
+  const [compareDiff, setCompareDiff] = useState<CompareDiffResult>(emptyDiff)
   const [roundTripDrift, setRoundTripDrift] = useState(false)
 
   useEffect(() => {
     if (!ready) {
-      setDiffLines([])
+      setCompareDiff(emptyDiff)
       return
     }
 
     let cancelled = false
     void renderMarkdownToHtml(markdown).then((expectedHtml) => {
       if (cancelled) return
-      setDiffLines(computeDiffLineIndices(expectedHtml, html))
+      setCompareDiff(computeCompareDiff(expectedHtml, html))
     })
 
     return () => {
@@ -54,9 +61,10 @@ export function useCompareDiff(
   }, [markdown, html, ready])
 
   return {
-    diffLines,
-    diffLineCount: diffLines.length,
-    hasDiff: diffLines.length > 0,
+    compareDiff,
+    diffLines: compareDiff.touchedLines,
+    diffLineCount: compareDiff.touchedLines.length,
+    hasDiff: compareDiff.touchedLines.length > 0,
     roundTripDrift,
   }
 }

@@ -16,9 +16,10 @@ import { useCompareDiff } from './useCompareDiff'
 import { createSplitScrollSync } from './scrollSync'
 import { useApp } from '../app/AppProvider'
 import {
-  applyHtmlDiffLines,
+  applyHtmlCompareDiff,
   htmlDiffExtension,
 } from './htmlDiffDecorations'
+import { formatCompareDiffHint } from './compareDiff'
 
 type CompareEditorProps = {
   value: string
@@ -36,7 +37,7 @@ export function CompareEditor({
   const { html, onHtmlChange, ready, syncHtmlFromMarkdown, applyHtmlToMarkdown } =
     useHtmlMarkdownSync(value, onChange)
   const { showNotice } = useApp()
-  const { diffLines, diffLineCount, hasDiff, roundTripDrift } = useCompareDiff(
+  const { compareDiff, diffLineCount, hasDiff, roundTripDrift } = useCompareDiff(
     value,
     html,
     ready,
@@ -88,15 +89,19 @@ export function CompareEditor({
   useEffect(() => {
     const view = htmlEditorRef.current
     if (!view) return
-    applyHtmlDiffLines(view, showDiff && hasDiff ? diffLines : [])
-  }, [diffLines, hasDiff, showDiff])
+    applyHtmlCompareDiff(view, showDiff && hasDiff ? compareDiff : {
+      fullLines: [],
+      wordSpans: [],
+      touchedLines: [],
+    })
+  }, [compareDiff, hasDiff, showDiff])
 
   const markdownBasis = `calc(${ratio * 100}% - 3px)`
   const htmlBasis = `calc(${(1 - ratio) * 100}% - 3px)`
 
   const diffHint =
     hasDiff && showDiff
-      ? `${diffLineCount} HTML line${diffLineCount === 1 ? '' : 's'} differ from Markdown render`
+      ? formatCompareDiffHint(compareDiff)
       : hasDiff
         ? `${diffLineCount} differing line${diffLineCount === 1 ? '' : 's'} (highlight hidden)`
         : 'HTML matches Markdown render'

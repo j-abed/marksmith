@@ -49,5 +49,21 @@ describe('appReducer zen and load', () => {
     expect(next.document.markdown).toBe('')
     expect(next.document.dirty).toBe(false)
     expect(next.saveStatus).toBe('saved')
+    expect(next.mode).toBe('raw')
+  })
+
+  it('loads a document with an explicit mode', () => {
+    const loaded = appReducer(baseState, {
+      type: 'loadDocument',
+      title: 'Notes',
+      markdown: '# Notes',
+      mode: 'compare',
+    })
+    expect(loaded.mode).toBe('compare')
+  })
+
+  it('creates a new document with an explicit mode', () => {
+    const next = appReducer(baseState, { type: 'newDocument', mode: 'split' })
+    expect(next.mode).toBe('split')
   })
 })

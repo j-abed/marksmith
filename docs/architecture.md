@@ -42,7 +42,14 @@ HTML string
   → Markdown (canonical)
 ```
 
-Round-trip is not lossless. Compare mode highlights lines where rendered HTML differs from the current Markdown. Toolbar actions:
+Round-trip is not lossless. Compare mode aligns expected vs. actual HTML with **LCS line matching**, then highlights:
+
+- **Inserted lines** — full-line marks on the HTML pane (`.compare-diff-line`)
+- **Changed lines** — word/token-level inline marks when a single-line edit is detected (`.compare-diff-word`)
+
+The toolbar hint summarizes line and word counts (e.g. “3 words differ on 1 HTML line”). Editing the HTML pane still debounces into Markdown (~350ms); diff highlights appear until the round-trip converges.
+
+Toolbar actions:
 
 - **Sync HTML from Markdown** — discard HTML pane edits and regenerate from Markdown
 - **Apply HTML to Markdown** — convert the HTML pane to canonical Markdown immediately
@@ -60,6 +67,8 @@ Round-trip is not lossless. Compare mode highlights lines where rendered HTML di
 
 Mode switching is in the **Mode** dropdown (top bar). Markdown is preserved when changing modes.
 
+**Per-document mode memory:** the last mode for each document is stored in `localStorage` (`marksmith:doc-modes`), keyed by `file:{sourceName}` for file-backed docs or `title:{title}` for untitled in-memory docs. Recent-document entries also store `mode`. Opening a file, reopening from **File → Recent**, or starting a new Untitled doc restores the saved mode. Renaming an untitled doc or **Save As** migrates the stored key.
+
 ### Hybrid mode
 
 Hybrid uses a CodeMirror `ViewPlugin` that walks the Lezer syntax tree and applies mark/replace decorations on headings, emphasis, links, lists, blockquotes, task lists, and fenced code. The document string is never modified.
@@ -67,10 +76,19 @@ Hybrid uses a CodeMirror `ViewPlugin` that walks the Lezer syntax tree and appli
 ## Persistence
 
 - **Autosave:** debounced 500ms to `localStorage` (`marksmith:draft`) — includes document, mode, theme
+- **Per-document modes:** `marksmith:doc-modes` map (see Editor modes above)
 - **Save / Save As:** `.md` via File System Access API or download; links file handle for ⌘S when supported
-- **Save As HTML:** standalone HTML page (does not replace the linked `.md` handle)
+- **Linked file format:** ⌘S writes Markdown to `.md` handles and rendered HTML to `.html` handles (detected from the linked filename)
+- **Save As HTML:** standalone HTML page; links the handle so subsequent ⌘S updates the HTML file
 - **Export:** Markdown, HTML, plain text, JSON from the Export menu
-- **Recent documents:** up to 10 entries in `localStorage`
+- **Recent documents:** up to 10 entries in `localStorage` (title, markdown snapshot, optional `sourceName`, `importedFromHtml`, `mode`)
+
+## Document sidebar
+
+**View → Show outline** and **View → Show frontmatter** open a tabbed sidebar:
+
+- **Outline** — jump to headings in the editor or preview
+- **Frontmatter** — edit YAML `title`, `date`, and `tags` at the top of the Markdown file (written back into canonical `markdown` on blur)
 
 ## Search & editing
 

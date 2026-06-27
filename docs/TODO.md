@@ -20,12 +20,15 @@ Tracked follow-ups for Marksmith. See [architecture.md](./architecture.md) for d
 - [x] Regenerate showcase screenshots after major UI changes (`npm run capture:showcase`)
 - [x] Install as app (PWA) — **View → Install app…** when the browser offers it
 
+## Recently shipped
+
+- [x] Smarter Compare diff (LCS line alignment + word-level inline highlights)
+- [x] Mode memory per document (`marksmith:doc-modes` + recent entry `mode`)
+- [x] Save linked file format detection (`.md` vs `.html` handle for ⌘S)
+- [x] Frontmatter panel (title, tags, date from YAML header)
+
 ## Medium term
 
-- [ ] Smarter Compare diff (word-level or structural)
-- [ ] Mode memory per document (restore last mode reliably on new vs. restored docs)
-- [ ] Save linked file format detection (`.md` vs `.html` handle for ⌘S)
-- [ ] Frontmatter panel (title, tags, date from YAML header)
 - [ ] Native desktop wrapper (Tauri or Electron) for `.md` file associations and true dock icon without browser chrome
 
 ## Long term

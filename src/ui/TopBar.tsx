@@ -13,7 +13,9 @@ import { ViewMenu } from './ViewMenu'
 type TopBarProps = {
   editorRef?: RefObject<EditorView | null>
   outlineOpen: boolean
+  frontmatterOpen: boolean
   onToggleOutline: () => void
+  onToggleFrontmatter: () => void
   onFind: () => void
   onReplace: () => void
   onOpenShortcuts: () => void
@@ -25,7 +27,9 @@ const faviconHref = `${import.meta.env.BASE_URL}favicon.svg`
 export function TopBar({
   editorRef,
   outlineOpen,
+  frontmatterOpen,
   onToggleOutline,
+  onToggleFrontmatter,
   onFind,
   onReplace,
   onOpenShortcuts,
@@ -102,7 +106,9 @@ export function TopBar({
           />
           <ViewMenu
             outlineOpen={outlineOpen}
+            frontmatterOpen={frontmatterOpen}
             onToggleOutline={onToggleOutline}
+            onToggleFrontmatter={onToggleFrontmatter}
             onOpenShortcuts={onOpenShortcuts}
             canInstallApp={showInstallInMenu}
             onInstallApp={handleInstallApp}

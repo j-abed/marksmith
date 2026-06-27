@@ -3,6 +3,7 @@ import {
   downloadTextFile,
   safeExportBasename,
 } from './exportDocument'
+import type { LinkedFileFormat } from './linkedFileFormat'
 import {
   importNotice,
   normalizeImportedContent,
@@ -151,12 +152,18 @@ export async function saveMarkdownAsWithPicker(
 export async function saveHtmlAsWithPicker(
   title: string,
   markdown: string,
+  existingHandle?: FileSystemFileHandle | null,
 ): Promise<FileSystemFileHandle | null> {
   const { filename, content, mimeType } = await buildExportContent(
     title,
     markdown,
     'html',
   )
+
+  if (existingHandle) {
+    await writeHandle(existingHandle, content)
+    return existingHandle
+  }
 
   if (supportsFileSystemAccess() && window.showSaveFilePicker) {
     const handle = await window.showSaveFilePicker({
@@ -176,4 +183,19 @@ export async function saveHtmlAsWithPicker(
   return null
 }
 
+export async function saveLinkedFile(
+  title: string,
+  markdown: string,
+  handle: FileSystemFileHandle,
+  format: LinkedFileFormat,
+): Promise<FileSystemFileHandle> {
+  if (format === 'html') {
+    const saved = await saveHtmlAsWithPicker(title, markdown, handle)
+    return saved ?? handle
+  }
+  const saved = await saveMarkdownWithPicker(title, markdown, handle)
+  return saved ?? handle
+}
+
 export { importNotice }
+export { detectLinkedFileFormat, saveFormatLabel, type LinkedFileFormat } from './linkedFileFormat'

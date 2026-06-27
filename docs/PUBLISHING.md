@@ -68,11 +68,11 @@ Open **http://127.0.0.1:4173** — then **View → Install app…**.
 
 ## Regenerate showcase screenshots
 
-After UI changes:
+Screenshots use the sample document in [`docs/showcase-content.md`](./showcase-content.md) (Project Brief). After UI changes:
 
 ```bash
 npm run capture:showcase
-git add docs/assets/
+git add docs/assets/ docs/showcase-content.md
 git commit -m "Update showcase screenshots"
 ```
 

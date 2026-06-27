@@ -65,12 +65,14 @@ npx serve docs
 
 ## Features
 
-- **Six editor modes:** Raw, Preview, Split, Hybrid, HTML (edit rendered HTML), Compare (Markdown ↔ HTML with diff)
+- **Six editor modes:** Raw, Preview, Split, Hybrid, HTML (edit rendered HTML), Compare (Markdown ↔ HTML with line + word diff)
+- **Mode memory:** each document remembers its last editor mode (files, recent entries, and Untitled)
 - CodeMirror 6 editing with formatting toolbar, find/replace, undo/redo
 - GitHub-Flavored Markdown preview with syntax highlighting and sanitization
 - **HTML import:** open `.html`, paste from clipboard, drag-and-drop — converted to Markdown on import
 - **Save As HTML:** standalone sanitized HTML page from current Markdown
-- File System Access API (where supported) + download fallback; recent documents
+- File System Access API (where supported) + download fallback; recent documents; ⌘S respects linked `.md` vs `.html` format
+- **Frontmatter panel** — edit YAML title, date, and tags in the document sidebar
 - Autosave to `localStorage`, export as Markdown / HTML / plain text / JSON
 - Resizable split/compare panes, scroll sync, outline sidebar, zen mode
 - Light and dark themes

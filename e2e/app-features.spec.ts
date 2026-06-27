@@ -8,6 +8,8 @@ const fixturePath = path.join(__dirname, 'fixtures', 'open-me.md')
 async function gotoFresh(page: Page) {
   await page.addInitScript(() => {
     localStorage.removeItem('marksmith:draft')
+    localStorage.removeItem('marksmith:doc-modes')
+    localStorage.removeItem('marksmith:recent')
   })
   await page.goto('/')
   await expect(page.getByLabel('Document title')).toBeVisible({ timeout: 15_000 })
@@ -159,6 +161,30 @@ test.describe('file menu', () => {
     const saveItem = menu.getByRole('menuitem').filter({ hasText: /^Save/ }).first()
     await expect(saveItem).toBeDisabled()
   })
+
+  test('restores last editor mode per document', async ({ page }) => {
+    await gotoFresh(page)
+
+    await page.getByTestId('file-open-input').setInputFiles(fixturePath)
+    await expect(page.getByLabel('Document title')).toHaveValue('open-me')
+
+    await selectMode(page, 'compare')
+    await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('mode-menu')).toContainText('Compare')
+
+    await page.getByRole('button', { name: /^File/ }).click()
+    await page.getByRole('menuitem').filter({ hasText: 'New document' }).click()
+    await expect(page.getByTestId('mode-menu')).toContainText('Raw')
+
+    await page.getByRole('button', { name: /^File/ }).click()
+    await page
+      .getByRole('menuitem')
+      .filter({ hasText: 'open-me.md' })
+      .click()
+
+    await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('mode-menu')).toContainText('Compare')
+  })
 })
 
 test.describe('keyboard shortcuts', () => {
@@ -208,11 +234,50 @@ test.describe('outline sidebar', () => {
     await page.getByRole('button', { name: /^View/ }).click()
     await page.getByRole('menuitem', { name: /Show outline/i }).click()
 
-    const sidebar = page.locator('.outline-sidebar')
+    const sidebar = page.locator('.document-sidebar')
     await expect(sidebar).toBeVisible()
     await expect(sidebar.getByRole('button', { name: 'Intro' })).toBeVisible()
     await expect(sidebar.getByRole('button', { name: 'Section A' })).toBeVisible()
     await expect(sidebar.getByRole('button', { name: 'Detail' })).toBeVisible()
+  })
+})
+
+test.describe('frontmatter panel', () => {
+  test('edits yaml header from View menu', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'marksmith:draft',
+        JSON.stringify({
+          document: {
+            id: 'frontmatter-test',
+            title: 'Project Brief',
+            markdown: '# Project Brief\n\n## Objective\n\nWrite docs.',
+            dirty: false,
+            updatedAt: new Date().toISOString(),
+          },
+          mode: 'raw',
+          theme: 'dark',
+        }),
+      )
+    })
+    await page.goto('/')
+    await expect(page.getByLabel('Document title')).toBeVisible({ timeout: 15_000 })
+
+    await page.getByRole('button', { name: /^View/ }).click()
+    await page.getByRole('menuitem', { name: /Show frontmatter/i }).click()
+
+    const panel = page.getByTestId('frontmatter-panel')
+    await expect(panel).toBeVisible()
+    await panel.getByTestId('frontmatter-title').fill('Launch Brief')
+    await panel.getByTestId('frontmatter-title').blur()
+    await panel.getByTestId('frontmatter-date').fill('2026-06-26')
+    await panel.getByTestId('frontmatter-date').blur()
+    await panel.getByTestId('frontmatter-tags').fill('local-first, docs')
+    await panel.getByTestId('frontmatter-tags').blur()
+
+    await expect(page.locator('.cm-content')).toContainText('title: Launch Brief')
+    await expect(page.locator('.cm-content')).toContainText('date: 2026-06-26')
+    await expect(page.locator('.cm-content')).toContainText('- docs')
   })
 })
 
@@ -355,10 +420,13 @@ test.describe('lazy-loaded modes', () => {
     await page.keyboard.press('Meta+a')
     await page.keyboard.insertText('<p>Custom HTML line</p>')
 
-    await expect(page.getByTestId('compare-diff-hint')).toContainText('differ from Markdown render', {
-      timeout: 5000,
+    // Assert before compare mode debounces HTML → Markdown (~350ms).
+    await expect(page.getByTestId('compare-diff-hint')).toHaveText(/differ/i, {
+      timeout: 500,
     })
-    await expect(page.locator('.compare-diff-line').first()).toBeVisible({ timeout: 5000 })
+    await expect(
+      page.locator('.compare-diff-line, .compare-diff-word').first(),
+    ).toBeVisible({ timeout: 500 })
   })
 
   test('compare mode sync actions update panes', async ({ page }) => {

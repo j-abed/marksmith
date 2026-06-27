@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useApp } from '../app/AppProvider'
+import { saveFormatLabel } from '../documents/linkedFileFormat'
 import { formatRecentDescription, formatRecentLabel } from '../documents/recentDocuments'
 import { TopBarMenu, type TopBarMenuEntry } from './TopBarMenu'
 
@@ -28,6 +29,8 @@ export function FileMenu({ onFeedback }: FileMenuProps) {
     saveFileAs,
     saveFileAsHtml,
     canSaveToDisk,
+    linkedFileFormat,
+    linkedFileName,
     recentDocuments,
   } = useApp()
 
@@ -88,7 +91,9 @@ export function FileMenu({ onFeedback }: FileMenuProps) {
         id: 'save',
         label: 'Save',
         description: canSaveToDisk
-          ? 'Update the linked file'
+          ? linkedFileFormat && linkedFileName
+            ? `Update linked ${saveFormatLabel(linkedFileFormat)} file (${linkedFileName})`
+            : 'Update the linked file'
           : 'Opens Save As when no file is linked',
         shortcut: '⌘S',
         disabled: !canSaveToDisk,
@@ -124,6 +129,8 @@ export function FileMenu({ onFeedback }: FileMenuProps) {
     return entries
   }, [
     canSaveToDisk,
+    linkedFileFormat,
+    linkedFileName,
     clearRecent,
     newDocument,
     onFeedback,

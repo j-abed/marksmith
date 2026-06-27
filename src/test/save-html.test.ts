@@ -1,5 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { saveHtmlAsWithPicker } from '../documents/fileAccess'
+import {
+  saveHtmlAsWithPicker,
+  saveLinkedFile,
+} from '../documents/fileAccess'
 import { renderMarkdownToHtml } from '../markdown/renderMarkdown'
 
 vi.mock('../markdown/renderMarkdown', () => ({
@@ -35,5 +38,36 @@ describe('saveHtmlAsWithPicker', () => {
     expect(renderMarkdownToHtml).toHaveBeenCalledWith('# Hello')
     expect(click).toHaveBeenCalled()
     createElement.mockRestore()
+  })
+
+  it('writes to an existing html handle without opening a picker', async () => {
+    const write = vi.fn()
+    const close = vi.fn()
+    const handle = {
+      name: 'notes.html',
+      createWritable: vi.fn(async () => ({ write, close })),
+    } as unknown as FileSystemFileHandle
+
+    const saved = await saveHtmlAsWithPicker('Notes', '# Hello', handle)
+
+    expect(saved).toBe(handle)
+    expect(write).toHaveBeenCalled()
+    expect(close).toHaveBeenCalled()
+  })
+})
+
+describe('saveLinkedFile', () => {
+  it('routes html linked files through html export', async () => {
+    const write = vi.fn()
+    const close = vi.fn()
+    const handle = {
+      name: 'notes.html',
+      createWritable: vi.fn(async () => ({ write, close })),
+    } as unknown as FileSystemFileHandle
+
+    await saveLinkedFile('Notes', '# Hello', handle, 'html')
+
+    expect(renderMarkdownToHtml).toHaveBeenCalledWith('# Hello')
+    expect(write).toHaveBeenCalled()
   })
 })

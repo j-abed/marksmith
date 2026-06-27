@@ -6,6 +6,7 @@ import {
   formatRecentDescription,
   loadRecentDocuments,
   MAX_RECENT_DOCUMENTS,
+  updateRecentDocumentMode,
 } from '../documents/recentDocuments'
 
 describe('recentDocuments', () => {
@@ -67,5 +68,32 @@ describe('recentDocuments', () => {
     expect(formatRecentDescription(entry, 'Jun 26')).toBe(
       'Jun 26 · Imported from HTML',
     )
+  })
+
+  it('preserves id and mode when updating a recent entry', () => {
+    const [first] = addRecentDocument({
+      title: 'Notes',
+      markdown: '# One',
+      mode: 'split',
+    })
+    const [updated] = addRecentDocument({
+      title: 'Notes',
+      markdown: '# One edited',
+      mode: 'compare',
+    })
+    expect(updated?.id).toBe(first?.id)
+    expect(updated?.mode).toBe('compare')
+  })
+
+  it('updates mode on an existing recent entry', () => {
+    addRecentDocument({ title: 'Notes', markdown: '# One' })
+    updateRecentDocumentMode({ title: 'Notes', mode: 'preview' })
+    expect(loadRecentDocuments()[0]?.mode).toBe('preview')
+  })
+
+  it('preserves prior mode when update omits mode', () => {
+    addRecentDocument({ title: 'Notes', markdown: '# One', mode: 'split' })
+    addRecentDocument({ title: 'Notes', markdown: '# One edited' })
+    expect(loadRecentDocuments()[0]?.mode).toBe('split')
   })
 })

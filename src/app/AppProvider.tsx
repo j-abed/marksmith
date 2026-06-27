@@ -10,20 +10,29 @@ import {
   type ReactNode,
 } from 'react'
 import { AUTOSAVE_DEBOUNCE_MS, loadDraft, saveDraft } from '../documents/autosave'
+import {
+  documentModeKey,
+  loadDocumentMode,
+  migrateDocumentModeKey,
+  saveDocumentMode,
+} from '../documents/documentPreferences'
 import { draftSnapshot } from '../documents/draftSnapshot'
 import {
+  detectLinkedFileFormat,
   openMarkdownWithPicker,
   readDocumentFile,
+  saveLinkedFile,
   saveMarkdownAsWithPicker,
-  saveMarkdownWithPicker,
   saveHtmlAsWithPicker,
   supportsFileSystemAccess,
   importNotice,
+  type LinkedFileFormat,
 } from '../documents/fileAccess'
 import {
   addRecentDocument,
   clearRecentDocuments,
   loadRecentDocuments,
+  updateRecentDocumentMode,
   type RecentDocument,
 } from '../documents/recentDocuments'
 import { countWords } from '../markdown/wordCount'
@@ -56,6 +65,8 @@ type AppContextValue = {
   saveFileAsHtml: () => Promise<string | null>
   loadFromFile: (file: File) => Promise<string | null>
   canSaveToDisk: boolean
+  linkedFileFormat: LinkedFileFormat | null
+  linkedFileName: string | null
   recentDocuments: RecentDocument[]
   outline: OutlineHeading[]
   notice: string | null
@@ -66,6 +77,23 @@ type AppContextValue = {
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
+
+const EDITOR_MODES: EditorMode[] = [
+  'raw',
+  'preview',
+  'split',
+  'hybrid',
+  'html',
+  'compare',
+]
+
+function resolveStoredMode(
+  input: { sourceName?: string; title: string },
+  fallback: EditorMode = 'raw',
+): EditorMode {
+  const stored = loadDocumentMode(input, fallback)
+  return stored && EDITOR_MODES.includes(stored) ? stored : fallback
+}
 
 const initialState: AppState = {
   document: createDocument(),
@@ -78,6 +106,10 @@ const initialState: AppState = {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState)
   const [hasFileHandle, setHasFileHandle] = useState(false)
+  const [linkedFileFormat, setLinkedFileFormat] = useState<LinkedFileFormat | null>(
+    null,
+  )
+  const [linkedFileName, setLinkedFileName] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [recentDocuments, setRecentDocuments] = useState(loadRecentDocuments)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -87,6 +119,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const confirmResolverRef = useRef<((confirmed: boolean) => void) | null>(null)
+  const sourceNameRef = useRef<string | undefined>(undefined)
+  const linkedFileFormatRef = useRef<LinkedFileFormat | null>(null)
+
+  const syncLinkedFile = useCallback(
+    (handle: FileSystemFileHandle | null, sourceName?: string) => {
+      fileHandleRef.current = handle
+      setHasFileHandle(handle !== null)
+      sourceNameRef.current = sourceName
+      setLinkedFileName(sourceName ?? null)
+      if (handle && sourceName) {
+        const format = detectLinkedFileFormat(sourceName)
+        linkedFileFormatRef.current = format
+        setLinkedFileFormat(format)
+      } else {
+        linkedFileFormatRef.current = null
+        setLinkedFileFormat(null)
+      }
+    },
+    [],
+  )
+
+  const persistDocumentMode = useCallback(
+    (mode: EditorMode, title: string, sourceName?: string) => {
+      saveDocumentMode(documentModeKey({ sourceName, title }), mode)
+      setRecentDocuments(
+        updateRecentDocumentMode({ title, sourceName, mode }),
+      )
+    },
+    [],
+  )
 
   const requestDiscardConfirm = useCallback((): Promise<boolean> => {
     if (!state.document.dirty) return Promise.resolve(true)
@@ -114,9 +176,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markdown: string,
       sourceName?: string,
       importedFromHtml?: boolean,
+      mode?: EditorMode,
     ) => {
       setRecentDocuments(
-        addRecentDocument({ title, markdown, sourceName, importedFromHtml }),
+        addRecentDocument({
+          title,
+          markdown,
+          sourceName,
+          importedFromHtml,
+          mode,
+        }),
       )
     },
     [],
@@ -129,14 +198,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       handle: FileSystemFileHandle | null,
       sourceName?: string,
       importedFromHtml?: boolean,
+      preferredMode?: string,
     ) => {
-      fileHandleRef.current = handle
-      setHasFileHandle(handle !== null)
-      dispatch({ type: 'loadDocument', title, markdown })
+      sourceNameRef.current = sourceName
+      const fallback =
+        preferredMode && EDITOR_MODES.includes(preferredMode as EditorMode)
+          ? (preferredMode as EditorMode)
+          : 'raw'
+      const mode = resolveStoredMode({ sourceName, title }, fallback)
+      syncLinkedFile(handle, sourceName)
+      dispatch({ type: 'loadDocument', title, markdown, mode })
       lastSavedSnapshot.current = null
-      recordRecent(title, markdown, sourceName, importedFromHtml)
+      recordRecent(title, markdown, sourceName, importedFromHtml, mode)
     },
-    [recordRecent],
+    [recordRecent, syncLinkedFile],
   )
 
   const loadFileDirectly = useCallback(
@@ -167,7 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const openFileFromInput = useCallback(async () => {
     if (!(await requestDiscardConfirm())) return
     fileInputRef.current?.click()
-  }, [requestDiscardConfirm])
+  }, [requestDiscardConfirm, syncLinkedFile])
 
   const openFileFromPicker = useCallback(
     (onResult: (message: string | null) => void) => {
@@ -218,14 +293,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!entry) return null
       if (!(await requestDiscardConfirm())) return null
 
-      fileHandleRef.current = null
-      setHasFileHandle(false)
+      sourceNameRef.current = entry.sourceName
       applyLoadedDocument(
         entry.title,
         entry.markdown,
         null,
         entry.sourceName,
         entry.importedFromHtml,
+        entry.mode,
       )
       const msg = `Opened ${entry.title}`
       setNotice(msg)
@@ -242,41 +317,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const newDocument = useCallback(async (): Promise<string | null> => {
     if (!(await requestDiscardConfirm())) return null
-    fileHandleRef.current = null
-    setHasFileHandle(false)
-    dispatch({ type: 'newDocument' })
+    sourceNameRef.current = undefined
+    syncLinkedFile(null)
+    const mode = resolveStoredMode({ title: 'Untitled' }, 'raw')
+    dispatch({ type: 'newDocument', mode })
     lastSavedSnapshot.current = null
     const msg = 'New document'
     setNotice(msg)
     return msg
-  }, [requestDiscardConfirm])
+  }, [requestDiscardConfirm, syncLinkedFile])
 
   const saveFile = useCallback(async (): Promise<string | null> => {
-    if (!fileHandleRef.current) {
+    const handle = fileHandleRef.current
+    const format = linkedFileFormatRef.current
+    if (!handle || !format) {
       return 'Use Save As to choose a file first'
     }
 
     try {
-      const handle = await saveMarkdownWithPicker(
+      const saved = await saveLinkedFile(
         state.document.title,
         state.document.markdown,
-        fileHandleRef.current,
+        handle,
+        format,
       )
-      if (handle) {
-        fileHandleRef.current = handle
-        setHasFileHandle(true)
-      }
+      fileHandleRef.current = saved
+      setHasFileHandle(true)
       dispatch({
         type: 'markSaved',
         savedAt: new Date().toISOString(),
       })
-      recordRecent(state.document.title, state.document.markdown)
-      return 'Saved to file'
+      recordRecent(
+        state.document.title,
+        state.document.markdown,
+        sourceNameRef.current,
+        undefined,
+        state.mode,
+      )
+      return format === 'html' ? 'Saved HTML to file' : 'Saved to file'
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return null
       return err instanceof Error ? err.message : 'Save failed'
     }
-  }, [recordRecent, state.document.markdown, state.document.title])
+  }, [recordRecent, state.document.markdown, state.document.title, state.mode])
 
   const saveFileAs = useCallback(async (): Promise<string | null> => {
     try {
@@ -285,20 +368,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
         state.document.markdown,
       )
       if (handle) {
-        fileHandleRef.current = handle
-        setHasFileHandle(true)
+        const previousKey = documentModeKey({
+          sourceName: sourceNameRef.current,
+          title: state.document.title,
+        })
+        syncLinkedFile(handle, handle.name)
+        migrateDocumentModeKey(
+          previousKey,
+          documentModeKey({
+            sourceName: handle.name,
+            title: state.document.title,
+          }),
+        )
       }
       dispatch({
         type: 'markSaved',
         savedAt: new Date().toISOString(),
       })
-      recordRecent(state.document.title, state.document.markdown)
+      recordRecent(
+        state.document.title,
+        state.document.markdown,
+        sourceNameRef.current,
+        undefined,
+        state.mode,
+      )
       return handle ? 'Saved to file' : 'Downloaded .md'
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return null
       return err instanceof Error ? err.message : 'Save failed'
     }
-  }, [recordRecent, state.document.markdown, state.document.title])
+  }, [recordRecent, state.document.markdown, state.document.title, state.mode, syncLinkedFile])
 
   const saveFileAsHtml = useCallback(async (): Promise<string | null> => {
     try {
@@ -306,13 +405,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         state.document.title,
         state.document.markdown,
       )
-      recordRecent(state.document.title, state.document.markdown)
+      if (handle) {
+        sourceNameRef.current = handle.name
+        syncLinkedFile(handle, handle.name)
+      }
+      dispatch({
+        type: 'markSaved',
+        savedAt: new Date().toISOString(),
+      })
+      recordRecent(
+        state.document.title,
+        state.document.markdown,
+        sourceNameRef.current,
+        undefined,
+        state.mode,
+      )
       return handle ? 'Saved HTML to file' : 'Downloaded .html'
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return null
       return err instanceof Error ? err.message : 'Save HTML failed'
     }
-  }, [recordRecent, state.document.markdown, state.document.title])
+  }, [recordRecent, state.document.markdown, state.document.title, state.mode])
 
   useEffect(() => {
     const draft = loadDraft()
@@ -397,12 +510,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
   const headingCount = outline.length
 
+  const setMode = useCallback(
+    (mode: EditorMode) => {
+      dispatch({ type: 'setMode', mode })
+      persistDocumentMode(mode, state.document.title, sourceNameRef.current)
+    },
+    [persistDocumentMode, state.document.title],
+  )
+
+  const setTitle = useCallback(
+    (title: string) => {
+      const previousTitle = state.document.title
+      if (title === previousTitle) return
+      if (!sourceNameRef.current) {
+        migrateDocumentModeKey(
+          documentModeKey({ title: previousTitle }),
+          documentModeKey({ title }),
+        )
+      }
+      dispatch({ type: 'setTitle', title })
+    },
+    [state.document.title],
+  )
+
   const value = useMemo<AppContextValue>(
     () => ({
       state,
       setMarkdown: (markdown) => dispatch({ type: 'setMarkdown', markdown }),
-      setTitle: (title) => dispatch({ type: 'setTitle', title }),
-      setMode: (mode) => dispatch({ type: 'setMode', mode }),
+      setTitle,
+      setMode,
       setTheme: (theme) => dispatch({ type: 'setTheme', theme }),
       toggleTheme: () => dispatch({ type: 'toggleTheme' }),
       toggleZenMode: () => dispatch({ type: 'toggleZenMode' }),
@@ -416,6 +552,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveFileAsHtml,
       loadFromFile,
       canSaveToDisk: hasFileHandle,
+      linkedFileFormat,
+      linkedFileName,
       recentDocuments,
       outline,
       notice,
@@ -426,6 +564,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      setTitle,
+      setMode,
       newDocument,
       openFileFromPicker,
       openFileFromInput,
@@ -436,6 +576,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveFileAsHtml,
       loadFromFile,
       hasFileHandle,
+      linkedFileFormat,
+      linkedFileName,
       recentDocuments,
       outline,
       wordCount,

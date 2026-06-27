@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -7,6 +7,11 @@ import { dirname, join } from 'node:path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
 const assets = join(root, 'docs', 'assets')
+const showcaseMarkdown = await readFile(
+  join(root, 'docs', 'showcase-content.md'),
+  'utf8',
+)
+const showcaseTitle = 'Project Brief'
 
 async function waitForServer(url, timeout = 60_000) {
   const start = Date.now()
@@ -20,6 +25,32 @@ async function waitForServer(url, timeout = 60_000) {
     await new Promise((r) => setTimeout(r, 500))
   }
   throw new Error(`Server not ready at ${url}`)
+}
+
+async function seedShowcaseDraft(page, theme) {
+  await page.addInitScript(
+    ({ markdown, title, theme }) => {
+      const now = new Date().toISOString()
+      localStorage.setItem(
+        'marksmith:draft',
+        JSON.stringify({
+          document: {
+            id: 'showcase-doc',
+            title,
+            markdown,
+            dirty: false,
+            updatedAt: now,
+          },
+          mode: 'split',
+          theme,
+        }),
+      )
+      localStorage.setItem('marksmith:theme', theme)
+      localStorage.removeItem('marksmith:doc-modes')
+      localStorage.removeItem('marksmith:recent')
+    },
+    { markdown: showcaseMarkdown, title: showcaseTitle, theme },
+  )
 }
 
 async function setAppTheme(page, theme) {
@@ -92,9 +123,21 @@ async function main() {
       })
       const page = await context.newPage()
 
+      await seedShowcaseDraft(page, theme)
       await page.goto('http://127.0.0.1:3456/app/')
       await page.waitForSelector('[data-testid="split-editor"], .app-shell', {
         timeout: 15_000,
+      })
+      await page.waitForFunction(
+        (title) => {
+          const input = document.querySelector('[aria-label="Document title"]')
+          return input instanceof HTMLInputElement && input.value === title
+        },
+        showcaseTitle,
+        { timeout: 10_000 },
+      )
+      await page.locator('.cm-content').getByText('Project Brief').waitFor({
+        timeout: 10_000,
       })
 
       await setAppTheme(page, theme)
