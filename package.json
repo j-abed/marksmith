@@ -1,6 +1,6 @@
 {
   "name": "marksmith",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Local-first Markdown editor where Markdown is the canonical source of truth",
   "license": "MIT",
   "type": "module",
