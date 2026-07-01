@@ -22,6 +22,29 @@ async function selectMode(page: Page, mode: string) {
   await page.getByTestId(`mode-${mode}`).click()
 }
 
+test.describe('document tabs', () => {
+  test('adds, switches, and closes tabs', async ({ page }) => {
+    await gotoFresh(page)
+
+    await expect(page.getByTestId('document-tab-bar')).toBeVisible()
+    await expect(page.getByRole('tab')).toHaveCount(1)
+
+    await page.getByTestId('document-tab-new').click()
+    await expect(page.getByRole('tab')).toHaveCount(2)
+
+    await page.getByRole('tab').nth(1).click()
+    await expect(page.locator('.cm-content')).not.toContainText('Welcome to Marksmith')
+
+    await page.getByRole('tab').nth(0).click()
+    await expect(page.locator('.cm-content')).toContainText('Welcome to Marksmith')
+
+    await page.getByRole('tab').nth(1).click()
+    await page.locator('.document-tab').nth(1).getByLabel('Close Untitled').click()
+    await expect(page.getByRole('tab')).toHaveCount(1)
+    await expect(page.locator('.cm-content')).toContainText('Welcome to Marksmith')
+  })
+})
+
 test.describe('zen mode', () => {
   test('hides chrome and exits with Escape', async ({ page }) => {
     await gotoFresh(page)

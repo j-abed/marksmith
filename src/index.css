@@ -262,6 +262,114 @@ input:focus-visible,
   color: var(--accent);
 }
 
+.document-tab-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 0 8px;
+  min-height: 32px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.document-tab {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  max-width: 200px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: transparent;
+}
+
+.document-tab--active {
+  background: var(--bg);
+  border-color: var(--border);
+}
+
+.document-tab--dirty .document-tab__label {
+  font-style: italic;
+}
+
+.document-tab__select {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 6px 4px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.document-tab--active .document-tab__select {
+  color: var(--text);
+}
+
+.document-tab__select:hover {
+  color: var(--text);
+}
+
+.document-tab__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-tab__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.document-tab__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.document-tab__close:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
+.document-tab-bar__new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  margin: 4px 0;
+  padding: 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.document-tab-bar__new:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
 .mode-selector {
   display: flex;
   gap: 1px;

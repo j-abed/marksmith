@@ -13,6 +13,7 @@ import { DocumentSidebar, type DocumentSidebarTab } from '../ui/DocumentSidebar'
 import { applyFrontmatter, type FrontmatterFields } from '../markdown/frontmatter'
 import { StatusBar } from '../ui/StatusBar'
 import { KeyboardShortcutsDialog } from '../ui/KeyboardShortcutsDialog'
+import { DocumentTabBar } from '../ui/DocumentTabBar'
 import { TopBar } from '../ui/TopBar'
 import { ZenExitButton } from '../ui/ZenExitButton'
 
@@ -59,6 +60,7 @@ export function App() {
     setMarkdown,
     setTitle,
     toggleZenMode,
+    newDocument,
     loadFromFile,
     outline,
     showNotice,
@@ -252,16 +254,23 @@ export function App() {
       }}
     >
       {!zenMode && (
-        <TopBar
-          editorRef={editorRef}
-          outlineOpen={sidebarOpen && sidebarTab === 'outline'}
-          frontmatterOpen={sidebarOpen && sidebarTab === 'frontmatter'}
-          onToggleOutline={toggleOutline}
-          onToggleFrontmatter={toggleFrontmatter}
-          onFind={openFind}
-          onReplace={openReplace}
-          onOpenShortcuts={openShortcutsHelp}
-        />
+        <>
+          <TopBar
+            editorRef={editorRef}
+            outlineOpen={sidebarOpen && sidebarTab === 'outline'}
+            frontmatterOpen={sidebarOpen && sidebarTab === 'frontmatter'}
+            onToggleOutline={toggleOutline}
+            onToggleFrontmatter={toggleFrontmatter}
+            onFind={openFind}
+            onReplace={openReplace}
+            onOpenShortcuts={openShortcutsHelp}
+          />
+          <DocumentTabBar
+            onNewTab={() => {
+              void newDocument()
+            }}
+          />
+        </>
       )}
       <KeyboardShortcutsDialog
         open={shortcutsOpen}

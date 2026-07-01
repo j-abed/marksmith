@@ -77,13 +77,34 @@ Hybrid uses a CodeMirror `ViewPlugin` that walks the Lezer syntax tree and appli
 
 ## Persistence
 
-- **Autosave:** debounced 500ms to `localStorage` (`marksmith:draft`) — includes document, mode, theme
+- **Autosave:** debounced 500ms to `localStorage` (`marksmith:draft`) — all open tabs, active tab id, and theme
 - **Per-document modes:** `marksmith:doc-modes` map (see Editor modes above)
-- **Save / Save As:** `.md` via File System Access API or download; links file handle for ⌘S when supported
+- **Save / Save As:** `.md` via File System Access API, Tauri native dialogs, or download; links file handle or path for ⌘S when supported
 - **Linked file format:** ⌘S writes Markdown to `.md` handles and rendered HTML to `.html` handles (detected from the linked filename)
 - **Save As HTML:** standalone HTML page; links the handle so subsequent ⌘S updates the HTML file
 - **Export:** Markdown, HTML, plain text, JSON from the Export menu
 - **Recent documents:** up to 10 entries in `localStorage` (title, markdown snapshot, optional `sourceName`, `importedFromHtml`, `mode`)
+
+## Multi-document tabs
+
+The workspace holds up to **20** open tabs. Each tab has its own `MarkdownDocument`, editor mode, linked file (path or browser handle), and discard baseline.
+
+```
+AppState
+  tabs: DocumentTab[]
+  activeTabId: string
+  theme, zenMode
+
+DocumentTab
+  document: MarkdownDocument
+  mode, saveStatus
+  sourceName?, linkedPath?
+  baseline: { title, markdown }   // revert target on discard
+```
+
+- **File → New** (⌘N) and **+** add a tab; **Open / Recent / drag-drop** open in a new tab unless that file is already open (then focus the existing tab).
+- **Switch / close** with unsaved edits prompts **Keep editing** or **Discard changes** — discard reverts the tab to its baseline (last save, open, or autosave commit).
+- Browser file handles are not restored after reload; Tauri `linkedPath` is restored from the draft. Content still reloads from `marksmith:draft`.
 
 ## Document sidebar
 

@@ -58,15 +58,28 @@ import {
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import {
   appReducer,
-  createDocument,
-  resolveInitialTheme,
+  createInitialAppState,
+  createTab,
+  findTabForLinkedFile,
+  getActiveTab,
+  MAX_OPEN_TABS,
+  tabLabel,
   type AppState,
   type EditorMode,
+  type MarkdownDocument,
+  type SaveStatus,
   type Theme,
+  ensureTabBaseline,
 } from './appState'
 
+export type ViewState = AppState & {
+  document: MarkdownDocument
+  mode: EditorMode
+  saveStatus: SaveStatus
+}
+
 type AppContextValue = {
-  state: AppState
+  state: ViewState
   setMarkdown: (markdown: string) => void
   setTitle: (title: string) => void
   setMode: (mode: EditorMode) => void
@@ -74,6 +87,8 @@ type AppContextValue = {
   toggleTheme: () => void
   toggleZenMode: () => void
   newDocument: () => Promise<string | null>
+  switchTab: (tabId: string) => Promise<boolean>
+  closeTab: (tabId: string) => Promise<boolean>
   openFileFromPicker: (onResult: (message: string | null) => void) => void
   openFileFromInput: () => Promise<void>
   openRecentDocument: (id: string) => Promise<string | null>
@@ -117,16 +132,19 @@ function resolveStoredMode(
   return stored && EDITOR_MODES.includes(stored) ? stored : fallback
 }
 
-const initialState: AppState = {
-  document: createDocument(),
-  mode: 'raw',
-  theme: resolveInitialTheme(),
-  saveStatus: 'saved',
-  zenMode: false,
+function toViewState(state: AppState): ViewState {
+  const active = getActiveTab(state)
+  return {
+    ...state,
+    document: active.document,
+    mode: active.mode,
+    saveStatus: active.saveStatus,
+  }
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialState)
+  const [state, dispatch] = useReducer(appReducer, undefined, createInitialAppState)
+  const activeTab = getActiveTab(state)
   const [hasFileHandle, setHasFileHandle] = useState(false)
   const [linkedFileFormat, setLinkedFileFormat] = useState<LinkedFileFormat | null>(
     null,
@@ -138,38 +156,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hydrated = useRef(false)
   const lastSavedSnapshot = useRef<string | null>(null)
-  const fileHandleRef = useRef<FileSystemFileHandle | null>(null)
-  const linkedPathRef = useRef<string | null>(null)
+  const fileHandlesRef = useRef(new Map<string, FileSystemFileHandle>())
   const fileInputRef = useRef<HTMLInputElement>(null)
   const confirmResolverRef = useRef<((confirmed: boolean) => void) | null>(null)
-  const sourceNameRef = useRef<string | undefined>(undefined)
+  const pendingDiscardTabIdRef = useRef<string | null>(null)
   const linkedFileFormatRef = useRef<LinkedFileFormat | null>(null)
 
-  const syncLinkedFile = useCallback(
+  const syncActiveLinkedFileUi = useCallback((tabId: string) => {
+    const tab = state.tabs.find((entry) => entry.id === tabId)
+    if (!tab) return
+    const handle = fileHandlesRef.current.get(tabId) ?? null
+    const path = tab.linkedPath ?? null
+    const sourceName = tab.sourceName
+    setHasFileHandle(handle !== null || path !== null)
+    setLinkedFileName(sourceName ?? null)
+    if ((handle && sourceName) || path) {
+      const name = sourceName
+      if (name) {
+        const format = detectLinkedFileFormat(name)
+        linkedFileFormatRef.current = format
+        setLinkedFileFormat(format)
+        return
+      }
+    }
+    linkedFileFormatRef.current = null
+    setLinkedFileFormat(null)
+  }, [state.tabs])
+
+  const setTabLinkedFile = useCallback(
     (
+      tabId: string,
       handle: FileSystemFileHandle | null,
       sourceName?: string,
       path?: string | null,
     ) => {
-      fileHandleRef.current = handle
-      linkedPathRef.current = path ?? null
-      setHasFileHandle(handle !== null || linkedPathRef.current !== null)
-      sourceNameRef.current = sourceName
-      setLinkedFileName(sourceName ?? null)
-      if ((handle && sourceName) || linkedPathRef.current) {
-        const name = sourceName ?? sourceNameRef.current
-        if (name) {
-          const format = detectLinkedFileFormat(name)
-          linkedFileFormatRef.current = format
-          setLinkedFileFormat(format)
-        }
+      if (handle) {
+        fileHandlesRef.current.set(tabId, handle)
       } else {
+        fileHandlesRef.current.delete(tabId)
+      }
+      dispatch({
+        type: 'setTabLinkedFile',
+        tabId,
+        sourceName,
+        linkedPath: path ?? null,
+      })
+      if (tabId === state.activeTabId) {
+        setHasFileHandle(handle !== null || (path ?? null) !== null)
+        setLinkedFileName(sourceName ?? null)
+        if ((handle && sourceName) || path) {
+          const name = sourceName
+          if (name) {
+            const format = detectLinkedFileFormat(name)
+            linkedFileFormatRef.current = format
+            setLinkedFileFormat(format)
+            return
+          }
+        }
         linkedFileFormatRef.current = null
         setLinkedFileFormat(null)
       }
     },
-    [],
+    [state.activeTabId],
   )
+
+  useEffect(() => {
+    syncActiveLinkedFileUi(state.activeTabId)
+  }, [state.activeTabId, state.tabs, syncActiveLinkedFileUi])
 
   const persistDocumentMode = useCallback(
     (mode: EditorMode, title: string, sourceName?: string) => {
@@ -181,22 +234,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const requestDiscardConfirm = useCallback((): Promise<boolean> => {
-    if (!state.document.dirty) return Promise.resolve(true)
-    return new Promise((resolve) => {
-      confirmResolverRef.current = resolve
-      setConfirmOpen(true)
-    })
-  }, [state.document.dirty])
+  const requestDiscardConfirm = useCallback(
+    (tabId: string = state.activeTabId): Promise<boolean> => {
+      const tab = state.tabs.find((entry) => entry.id === tabId)
+      if (!tab?.document.dirty) return Promise.resolve(true)
+      pendingDiscardTabIdRef.current = tabId
+      return new Promise((resolve) => {
+        confirmResolverRef.current = resolve
+        setConfirmOpen(true)
+      })
+    },
+    [state.activeTabId, state.tabs],
+  )
 
   const handleConfirmDiscard = useCallback(() => {
     setConfirmOpen(false)
+    const tabId = pendingDiscardTabIdRef.current
+    if (tabId) {
+      dispatch({ type: 'revertTab', tabId })
+      pendingDiscardTabIdRef.current = null
+    }
     confirmResolverRef.current?.(true)
     confirmResolverRef.current = null
   }, [])
 
   const handleCancelDiscard = useCallback(() => {
     setConfirmOpen(false)
+    pendingDiscardTabIdRef.current = null
     confirmResolverRef.current?.(false)
     confirmResolverRef.current = null
   }, [])
@@ -226,19 +290,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const snapshotDraftToRecent = useCallback(
     (
+      tabId: string,
       title: string,
       markdown: string,
       mode: EditorMode,
       documentId: string,
     ) => {
       if (!markdown.trim()) return
-      if (fileHandleRef.current || linkedPathRef.current) return
+      const tab = state.tabs.find((entry) => entry.id === tabId)
+      if (!tab) return
+      if (fileHandlesRef.current.has(tabId) || tab.linkedPath) return
       recordRecent(title, markdown, undefined, undefined, mode, documentId)
     },
-    [recordRecent],
+    [recordRecent, state.tabs],
   )
 
-  const applyLoadedDocument = useCallback(
+  const activateTab = useCallback(
+    async (tabId: string, noticeMessage?: string): Promise<string | null> => {
+      if (tabId === state.activeTabId) {
+        if (noticeMessage) setNotice(noticeMessage)
+        return tabId
+      }
+      if (!(await requestDiscardConfirm(state.activeTabId))) return null
+      dispatch({ type: 'switchTab', tabId })
+      if (noticeMessage) setNotice(noticeMessage)
+      return tabId
+    },
+    [requestDiscardConfirm, state.activeTabId],
+  )
+
+  const openDocumentInNewTab = useCallback(
     (
       title: string,
       markdown: string,
@@ -246,31 +327,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sourceName?: string,
       importedFromHtml?: boolean,
       preferredMode?: string,
-    ) => {
-      sourceNameRef.current = sourceName
+      path?: string | null,
+    ): string | null => {
+      const existing = findTabForLinkedFile(state.tabs, path, sourceName)
+      if (existing) {
+        void activateTab(existing.id, `Already open: ${tabLabel(existing)}`)
+        return existing.id
+      }
+
+      if (state.tabs.length >= MAX_OPEN_TABS) {
+        setNotice(
+          `Tab limit reached (${MAX_OPEN_TABS}). Close a tab to open another file.`,
+        )
+        return null
+      }
+
       const fallback =
         preferredMode && EDITOR_MODES.includes(preferredMode as EditorMode)
           ? (preferredMode as EditorMode)
           : 'raw'
       const mode = resolveStoredMode({ sourceName, title }, fallback)
       const resolvedTitle = resolveDocumentTitle(markdown, title)
-      syncLinkedFile(handle, sourceName)
-      dispatch({
-        type: 'loadDocument',
-        title: resolvedTitle,
-        markdown,
+      const tab = createTab({
+        document: {
+          title: resolvedTitle,
+          markdown,
+          dirty: false,
+        },
         mode,
+        saveStatus: 'saved',
+        sourceName,
+        linkedPath: path ?? null,
       })
-      lastSavedSnapshot.current = null
+      dispatch({
+        type: 'restoreWorkspace',
+        tabs: [...state.tabs, tab],
+        activeTabId: tab.id,
+      })
+      if (handle) {
+        fileHandlesRef.current.set(tab.id, handle)
+      }
       recordRecent(resolvedTitle, markdown, sourceName, importedFromHtml, mode)
+      return tab.id
     },
-    [recordRecent, syncLinkedFile],
+    [activateTab, recordRecent, state.tabs],
   )
 
   const loadFileDirectly = useCallback(
     async (file: File): Promise<string | null> => {
       const opened = await readDocumentFile(file)
-      applyLoadedDocument(
+      openDocumentInNewTab(
         opened.title,
         opened.markdown,
         opened.handle,
@@ -281,30 +387,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setNotice(msg)
       return msg
     },
-    [applyLoadedDocument],
+    [openDocumentInNewTab],
   )
 
   const loadFromFile = useCallback(
-    async (file: File): Promise<string | null> => {
-      if (!(await requestDiscardConfirm())) return null
-      return loadFileDirectly(file)
-    },
-    [loadFileDirectly, requestDiscardConfirm],
+    async (file: File): Promise<string | null> => loadFileDirectly(file),
+    [loadFileDirectly],
   )
 
   const openFileFromInput = useCallback(async () => {
-    if (!(await requestDiscardConfirm())) return
     fileInputRef.current?.click()
-  }, [requestDiscardConfirm, syncLinkedFile])
+  }, [])
 
   const openFileFromPicker = useCallback(
     (onResult: (message: string | null) => void) => {
       void (async () => {
-        if (!(await requestDiscardConfirm())) {
-          onResult(null)
-          return
-        }
-
         if (isTauri()) {
           try {
             const opened = await openDocumentWithDesktopDialog()
@@ -312,14 +409,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
               onResult(null)
               return
             }
-            applyLoadedDocument(
+            openDocumentInNewTab(
               opened.title,
               opened.markdown,
               null,
               opened.sourceName,
               opened.convertedFromHtml,
+              undefined,
+              opened.path,
             )
-            syncLinkedFile(null, opened.sourceName, opened.path)
             const msg = importNotice(
               opened.title,
               opened.convertedFromHtml,
@@ -339,7 +437,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               onResult(null)
               return
             }
-            applyLoadedDocument(
+            openDocumentInNewTab(
               picked.title,
               picked.markdown,
               picked.handle,
@@ -364,53 +462,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
         onResult(null)
       })()
     },
-    [applyLoadedDocument, requestDiscardConfirm],
+    [openDocumentInNewTab],
   )
 
   const openDocumentFromPaths = useCallback(
     async (paths: string[]) => {
-      const path = paths[0]
-      if (!path) return
-      if (!(await requestDiscardConfirm())) return
-
-      try {
-        const opened = await openDocumentFromPath(path)
-        applyLoadedDocument(
-          opened.title,
-          opened.markdown,
-          null,
-          opened.sourceName,
-          opened.convertedFromHtml,
-        )
-        syncLinkedFile(null, opened.sourceName, opened.path)
-        setNotice(
-          importNotice(opened.title, opened.convertedFromHtml),
-        )
-      } catch (err) {
-        setNotice(err instanceof Error ? err.message : 'Open failed')
+      let lastMsg: string | null = null
+      for (const path of paths) {
+        try {
+          const opened = await openDocumentFromPath(path)
+          openDocumentInNewTab(
+            opened.title,
+            opened.markdown,
+            null,
+            opened.sourceName,
+            opened.convertedFromHtml,
+            undefined,
+            opened.path,
+          )
+          lastMsg = importNotice(opened.title, opened.convertedFromHtml)
+        } catch (err) {
+          setNotice(err instanceof Error ? err.message : 'Open failed')
+          return
+        }
       }
+      if (lastMsg) setNotice(lastMsg)
     },
-    [applyLoadedDocument, requestDiscardConfirm, syncLinkedFile],
+    [openDocumentInNewTab],
   )
 
-  const handleTauriBootstrapComplete = useCallback((openedAny: boolean) => {
-    if (!openedAny) {
-      const draft = loadDraft()
-      if (draft?.document) {
-        const title = resolveDocumentTitle(
-          draft.document.markdown,
-          draft.document.title,
-        )
-        dispatch({
-          type: 'restoreDocument',
-          document: { ...draft.document, title, dirty: false },
-          mode: draft.mode as EditorMode | undefined,
-          theme: draft.theme as Theme | undefined,
-        })
+  const restoreDraft = useCallback((draft: NonNullable<ReturnType<typeof loadDraft>>) => {
+    const tabs = draft.tabs.map((tab) => {
+      const withBaseline = ensureTabBaseline(tab)
+      return {
+        ...withBaseline,
+        document: {
+          ...withBaseline.document,
+          title: resolveDocumentTitle(
+            withBaseline.document.markdown,
+            withBaseline.document.title,
+          ),
+          dirty: false,
+        },
+        saveStatus: 'saved' as const,
       }
-    }
-    hydrated.current = true
+    })
+    dispatch({
+      type: 'restoreWorkspace',
+      tabs,
+      activeTabId: draft.activeTabId,
+      theme: draft.theme as Theme | undefined,
+    })
   }, [])
+
+  const handleTauriBootstrapComplete = useCallback(
+    (openedAny: boolean) => {
+      if (!openedAny) {
+        const draft = loadDraft()
+        if (draft?.tabs.length) {
+          restoreDraft(draft)
+        }
+      }
+      hydrated.current = true
+    },
+    [restoreDraft],
+  )
 
   useTauriOpenFiles(openDocumentFromPaths, handleTauriBootstrapComplete)
 
@@ -418,10 +534,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (id: string): Promise<string | null> => {
       const entry = recentDocuments.find((doc) => doc.id === id)
       if (!entry) return null
-      if (!(await requestDiscardConfirm())) return null
 
-      sourceNameRef.current = entry.sourceName
-      applyLoadedDocument(
+      openDocumentInNewTab(
         entry.title,
         entry.markdown,
         null,
@@ -433,7 +547,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setNotice(msg)
       return msg
     },
-    [applyLoadedDocument, recentDocuments, requestDiscardConfirm],
+    [openDocumentInNewTab, recentDocuments],
   )
 
   const clearRecent = useCallback(() => {
@@ -443,35 +557,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const newDocument = useCallback(async (): Promise<string | null> => {
-    if (!(await requestDiscardConfirm())) return null
-    snapshotDraftToRecent(
-      state.document.title,
-      state.document.markdown,
-      state.mode,
-      state.document.id,
-    )
-    sourceNameRef.current = undefined
-    syncLinkedFile(null)
+    if (state.tabs.length >= MAX_OPEN_TABS) {
+      setNotice(
+        `Tab limit reached (${MAX_OPEN_TABS}). Close a tab before opening another.`,
+      )
+      return null
+    }
     const mode = resolveStoredMode({ title: 'Untitled' }, 'raw')
-    dispatch({ type: 'newDocument', mode })
+    dispatch({ type: 'addTab', mode })
     lastSavedSnapshot.current = null
     const msg = 'New document'
     setNotice(msg)
     return msg
-  }, [
-    requestDiscardConfirm,
-    snapshotDraftToRecent,
-    state.document.id,
-    state.document.markdown,
-    state.document.title,
-    state.mode,
-    syncLinkedFile,
-  ])
+  }, [state.tabs.length])
+
+  const switchTab = useCallback(
+    async (tabId: string): Promise<boolean> => {
+      if (tabId === state.activeTabId) return true
+      if (!(await requestDiscardConfirm(state.activeTabId))) return false
+      dispatch({ type: 'switchTab', tabId })
+      return true
+    },
+    [requestDiscardConfirm, state.activeTabId],
+  )
+
+  const closeTab = useCallback(
+    async (tabId: string): Promise<boolean> => {
+      const tab = state.tabs.find((entry) => entry.id === tabId)
+      if (!tab) return false
+      if (!(await requestDiscardConfirm(tabId))) return false
+
+      snapshotDraftToRecent(
+        tabId,
+        tab.document.title,
+        tab.document.markdown,
+        tab.mode,
+        tab.document.id,
+      )
+      fileHandlesRef.current.delete(tabId)
+      dispatch({ type: 'closeTab', tabId })
+      return true
+    },
+    [requestDiscardConfirm, snapshotDraftToRecent, state.tabs],
+  )
 
   const saveFile = useCallback(async (): Promise<string | null> => {
-    const handle = fileHandleRef.current
-    const path = linkedPathRef.current
-    const format = linkedFileFormatRef.current
+    const tabId = state.activeTabId
+    const tab = getActiveTab(state)
+    const handle = fileHandlesRef.current.get(tabId) ?? null
+    const path = tab.linkedPath ?? null
+    const format = tab.sourceName ? detectLinkedFileFormat(tab.sourceName) : null
     if (!format || (!handle && !path)) {
       return 'Use Save As to choose a file first'
     }
@@ -480,18 +615,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (path && isTauri()) {
         await saveDesktopLinkedFile(
           path,
-          state.document.title,
-          state.document.markdown,
+          tab.document.title,
+          tab.document.markdown,
           format,
         )
       } else if (handle) {
         const saved = await saveLinkedFile(
-          state.document.title,
-          state.document.markdown,
+          tab.document.title,
+          tab.document.markdown,
           handle,
           format,
         )
-        fileHandleRef.current = saved
+        fileHandlesRef.current.set(tabId, saved)
         setHasFileHandle(true)
       } else {
         return 'Use Save As to choose a file first'
@@ -500,160 +635,159 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dispatch({
         type: 'markSaved',
         savedAt: new Date().toISOString(),
+        tabId,
       })
       recordRecent(
-        state.document.title,
-        state.document.markdown,
-        sourceNameRef.current,
+        tab.document.title,
+        tab.document.markdown,
+        tab.sourceName,
         undefined,
-        state.mode,
+        tab.mode,
       )
       return format === 'html' ? 'Saved HTML to file' : 'Saved to file'
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return null
       return err instanceof Error ? err.message : 'Save failed'
     }
-  }, [recordRecent, state.document.markdown, state.document.title, state.mode])
+  }, [recordRecent, state])
 
   const saveFileAs = useCallback(async (): Promise<string | null> => {
+    const tabId = state.activeTabId
+    const tab = getActiveTab(state)
     try {
       if (isTauri()) {
         const path = await saveMarkdownAsWithDesktopDialog(
-          state.document.title,
-          state.document.markdown,
+          tab.document.title,
+          tab.document.markdown,
         )
         if (!path) return null
         const sourceName = await desktopSourceName(path)
         const previousKey = documentModeKey({
-          sourceName: sourceNameRef.current,
-          title: state.document.title,
+          sourceName: tab.sourceName,
+          title: tab.document.title,
         })
-        syncLinkedFile(null, sourceName, path)
+        setTabLinkedFile(tabId, null, sourceName, path)
         migrateDocumentModeKey(
           previousKey,
           documentModeKey({
             sourceName,
-            title: state.document.title,
+            title: tab.document.title,
           }),
         )
         dispatch({
           type: 'markSaved',
           savedAt: new Date().toISOString(),
+          tabId,
         })
         recordRecent(
-          state.document.title,
-          state.document.markdown,
+          tab.document.title,
+          tab.document.markdown,
           sourceName,
           undefined,
-          state.mode,
+          tab.mode,
         )
         return 'Saved to file'
       }
 
       const handle = await saveMarkdownAsWithPicker(
-        state.document.title,
-        state.document.markdown,
+        tab.document.title,
+        tab.document.markdown,
       )
       if (handle) {
         const previousKey = documentModeKey({
-          sourceName: sourceNameRef.current,
-          title: state.document.title,
+          sourceName: tab.sourceName,
+          title: tab.document.title,
         })
-        syncLinkedFile(handle, handle.name)
+        setTabLinkedFile(tabId, handle, handle.name, null)
         migrateDocumentModeKey(
           previousKey,
           documentModeKey({
             sourceName: handle.name,
-            title: state.document.title,
+            title: tab.document.title,
           }),
         )
       }
       dispatch({
         type: 'markSaved',
         savedAt: new Date().toISOString(),
+        tabId,
       })
       recordRecent(
-        state.document.title,
-        state.document.markdown,
-        sourceNameRef.current,
+        tab.document.title,
+        tab.document.markdown,
+        tab.sourceName,
         undefined,
-        state.mode,
+        tab.mode,
       )
       return handle ? 'Saved to file' : 'Downloaded .md'
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return null
       return err instanceof Error ? err.message : 'Save failed'
     }
-  }, [recordRecent, state.document.markdown, state.document.title, state.mode, syncLinkedFile])
+  }, [recordRecent, setTabLinkedFile, state])
 
   const saveFileAsHtml = useCallback(async (): Promise<string | null> => {
+    const tabId = state.activeTabId
+    const tab = getActiveTab(state)
     try {
       if (isTauri()) {
         const path = await saveHtmlAsWithDesktopDialog(
-          state.document.title,
-          state.document.markdown,
+          tab.document.title,
+          tab.document.markdown,
         )
         if (!path) return null
         const sourceName = await desktopSourceName(path)
-        syncLinkedFile(null, sourceName, path)
+        setTabLinkedFile(tabId, null, sourceName, path)
         dispatch({
           type: 'markSaved',
           savedAt: new Date().toISOString(),
+          tabId,
         })
         recordRecent(
-          state.document.title,
-          state.document.markdown,
+          tab.document.title,
+          tab.document.markdown,
           sourceName,
           undefined,
-          state.mode,
+          tab.mode,
         )
         return 'Saved HTML to file'
       }
 
       const handle = await saveHtmlAsWithPicker(
-        state.document.title,
-        state.document.markdown,
+        tab.document.title,
+        tab.document.markdown,
       )
       if (handle) {
-        sourceNameRef.current = handle.name
-        syncLinkedFile(handle, handle.name)
+        setTabLinkedFile(tabId, handle, handle.name, null)
       }
       dispatch({
         type: 'markSaved',
         savedAt: new Date().toISOString(),
+        tabId,
       })
       recordRecent(
-        state.document.title,
-        state.document.markdown,
-        sourceNameRef.current,
+        tab.document.title,
+        tab.document.markdown,
+        tab.sourceName,
         undefined,
-        state.mode,
+        tab.mode,
       )
       return handle ? 'Saved HTML to file' : 'Downloaded .html'
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return null
       return err instanceof Error ? err.message : 'Save HTML failed'
     }
-  }, [recordRecent, state.document.markdown, state.document.title, state.mode])
+  }, [recordRecent, setTabLinkedFile, state])
 
   useEffect(() => {
     if (isTauri()) return
 
     const draft = loadDraft()
-    if (draft?.document) {
-      const title = resolveDocumentTitle(
-        draft.document.markdown,
-        draft.document.title,
-      )
-      dispatch({
-        type: 'restoreDocument',
-        document: { ...draft.document, title, dirty: false },
-        mode: draft.mode as EditorMode | undefined,
-        theme: draft.theme as Theme | undefined,
-      })
+    if (draft?.tabs.length) {
+      restoreDraft(draft)
     }
     hydrated.current = true
-  }, [])
+  }, [restoreDraft])
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme
@@ -687,28 +821,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (saveTimer.current) clearTimeout(saveTimer.current)
 
-    if (state.document.dirty) {
+    const hasDirty = state.tabs.some((tab) => tab.document.dirty)
+    if (hasDirty) {
       dispatch({ type: 'setSaveStatus', saveStatus: 'saving' })
     }
 
     saveTimer.current = setTimeout(() => {
-      const { document, mode, theme } = state
+      const tabs = state.tabs.map((tab) => ({
+        ...tab,
+        document: { ...tab.document, dirty: false },
+        saveStatus: 'saved' as const,
+        baseline: {
+          title: tab.document.title,
+          markdown: tab.document.markdown,
+        },
+      }))
       saveDraft({
-        document: { ...document, dirty: false },
-        mode,
-        theme,
+        tabs,
+        activeTabId: state.activeTabId,
+        theme: state.theme,
       })
-      snapshotDraftToRecent(
-        document.title,
-        document.markdown,
-        mode,
-        document.id,
-      )
-      lastSavedSnapshot.current = snapshot
+      for (const tab of tabs) {
+        snapshotDraftToRecent(
+          tab.id,
+          tab.document.title,
+          tab.document.markdown,
+          tab.mode,
+          tab.document.id,
+        )
+      }
       dispatch({
-        type: 'markSaved',
-        savedAt: new Date().toISOString(),
+        type: 'restoreWorkspace',
+        tabs,
+        activeTabId: state.activeTabId,
       })
+      lastSavedSnapshot.current = snapshot
     }, AUTOSAVE_DEBOUNCE_MS)
 
     return () => {
@@ -716,81 +863,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [
     snapshotDraftToRecent,
-    state.document.dirty,
-    state.document.id,
-    state.document.markdown,
-    state.document.title,
-    state.mode,
-    state.theme,
+    state,
   ])
 
   const outline = useMemo(
-    () => extractOutline(state.document.markdown),
-    [state.document.markdown],
+    () => extractOutline(activeTab.document.markdown),
+    [activeTab.document.markdown],
   )
   const wordCount = useMemo(
-    () => countWords(state.document.markdown),
-    [state.document.markdown],
+    () => countWords(activeTab.document.markdown),
+    [activeTab.document.markdown],
   )
   const headingCount = outline.length
 
   const setMode = useCallback(
     (mode: EditorMode) => {
       dispatch({ type: 'setMode', mode })
-      persistDocumentMode(mode, state.document.title, sourceNameRef.current)
+      persistDocumentMode(mode, activeTab.document.title, activeTab.sourceName)
     },
-    [persistDocumentMode, state.document.title],
+    [activeTab.document.title, activeTab.sourceName, persistDocumentMode],
   )
 
   const setTitle = useCallback(
     (title: string) => {
-      const previousTitle = state.document.title
+      const previousTitle = activeTab.document.title
       if (title === previousTitle) return
-      if (!sourceNameRef.current) {
+      if (!activeTab.sourceName) {
         migrateDocumentModeKey(
           documentModeKey({ title: previousTitle }),
           documentModeKey({ title }),
         )
       }
-      const nextMarkdown = setFrontmatterTitle(state.document.markdown, title)
-      if (nextMarkdown !== state.document.markdown) {
+      const nextMarkdown = setFrontmatterTitle(activeTab.document.markdown, title)
+      if (nextMarkdown !== activeTab.document.markdown) {
         dispatch({ type: 'setMarkdown', markdown: nextMarkdown })
       }
       dispatch({ type: 'setTitle', title })
     },
-    [state.document.markdown, state.document.title],
+    [activeTab.document.markdown, activeTab.document.title, activeTab.sourceName],
   )
 
   const hasFrontmatterMetadata = useMemo(
-    () => documentHasFrontmatterMetadata(state.document.markdown),
-    [state.document.markdown],
+    () => documentHasFrontmatterMetadata(activeTab.document.markdown),
+    [activeTab.document.markdown],
   )
 
   const loadSidebarPrefs = useCallback(
     () =>
       loadDocumentSidebarPrefs({
-        sourceName: sourceNameRef.current,
-        title: state.document.title,
+        sourceName: activeTab.sourceName,
+        title: activeTab.document.title,
       }),
-    [state.document.title],
+    [activeTab.document.title, activeTab.sourceName],
   )
 
   const saveSidebarPrefs = useCallback(
     (prefs: DocumentSidebarPrefs) => {
       saveDocumentSidebarPrefs(
         {
-          sourceName: sourceNameRef.current,
-          title: state.document.title,
+          sourceName: activeTab.sourceName,
+          title: activeTab.document.title,
         },
         prefs,
       )
     },
-    [state.document.title],
+    [activeTab.document.title, activeTab.sourceName],
   )
+
+  const viewState = useMemo(() => toViewState(state), [state])
 
   const value = useMemo<AppContextValue>(
     () => ({
-      state,
+      state: viewState,
       setMarkdown: (markdown) => dispatch({ type: 'setMarkdown', markdown }),
       setTitle,
       setMode,
@@ -798,6 +942,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       toggleTheme: () => dispatch({ type: 'toggleTheme' }),
       toggleZenMode: () => dispatch({ type: 'toggleZenMode' }),
       newDocument,
+      switchTab,
+      closeTab,
       openFileFromPicker,
       openFileFromInput,
       openRecentDocument,
@@ -809,7 +955,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       canSaveToDisk: hasFileHandle,
       linkedFileFormat,
       linkedFileName,
-      documentSessionKey: state.document.id,
+      documentSessionKey: activeTab.id,
       hasFrontmatterMetadata,
       loadSidebarPrefs,
       saveSidebarPrefs,
@@ -822,10 +968,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       headingCount,
     }),
     [
-      state,
+      viewState,
       setTitle,
       setMode,
       newDocument,
+      switchTab,
+      closeTab,
       openFileFromPicker,
       openFileFromInput,
       openRecentDocument,
@@ -837,6 +985,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hasFileHandle,
       linkedFileFormat,
       linkedFileName,
+      activeTab.id,
       hasFrontmatterMetadata,
       loadSidebarPrefs,
       saveSidebarPrefs,

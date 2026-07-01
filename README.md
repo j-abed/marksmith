@@ -88,6 +88,7 @@ npx serve docs
 - Light and dark themes
 - **Installable PWA** — add to dock/home screen from a production build
 - **Native desktop (Tauri)** — `.md` file associations, Open With while running, native open/save dialogs; same editor as the web app
+- **Multi-document tabs** — tab bar with per-tab dirty state, mode memory, and autosave; reopening the same file focuses the existing tab
 
 ## Docs
 

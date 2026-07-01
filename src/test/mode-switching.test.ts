@@ -2,17 +2,23 @@ import { describe, expect, it } from 'vitest'
 import {
   appReducer,
   createDocument,
+  createTab,
+  getActiveTab,
   type AppState,
   type EditorMode,
 } from '../app/appState'
 
 const baseState: AppState = {
-  document: createDocument({ markdown: '# Hello\n\n**world**' }),
-  mode: 'raw',
+  tabs: [
+    createTab({
+      document: createDocument({ markdown: '# Hello\n\n**world**' }),
+    }),
+  ],
+  activeTabId: '',
   theme: 'light',
-  saveStatus: 'saved',
   zenMode: false,
 }
+baseState.activeTabId = baseState.tabs[0]!.id
 
 describe('mode switching', () => {
   it('preserves markdown when switching modes', () => {
@@ -28,7 +34,7 @@ describe('mode switching', () => {
 
     for (const mode of modes) {
       state = appReducer(state, { type: 'setMode', mode })
-      expect(state.document.markdown).toBe('# Hello\n\n**world**')
+      expect(getActiveTab(state).document.markdown).toBe('# Hello\n\n**world**')
     }
   })
 
@@ -37,7 +43,7 @@ describe('mode switching', () => {
       type: 'setTitle',
       title: 'New Title',
     })
-    expect(state.document.markdown).toBe('# Hello\n\n**world**')
-    expect(state.document.title).toBe('New Title')
+    expect(getActiveTab(state).document.markdown).toBe('# Hello\n\n**world**')
+    expect(getActiveTab(state).document.title).toBe('New Title')
   })
 })

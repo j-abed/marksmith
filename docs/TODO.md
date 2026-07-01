@@ -30,15 +30,17 @@ Tracked follow-ups for Marksmith. See [architecture.md](./architecture.md) for d
 - [x] Compare mode auto-sync toggle (inspect diffs without silent round-trip)
 - [x] Per-document sidebar restore (outline/frontmatter tab + open state)
 - [x] Native desktop wrapper (Tauri) — `.md` / `.html` file associations, Open With (cold + warm), native dialogs, draft → Recent ([docs/TAURI.md](./TAURI.md))
+- [x] Multi-document tabs — tab bar, per-tab dirty/mode/autosave, open in new tab
 
 ## Medium term
 
 - [ ] Desktop polish — window title from filename, native macOS menu bar
+- [ ] Tab polish — drag-reorder, optional e2e expansion
 
 ## Long term
 
 - [ ] Full WYSIWYG / rich-text mode ([Milkdown](https://milkdown.dev/) or similar) — Markdown round-trip
-- [ ] Multi-document workspace (tabs or sidebar library)
+- [ ] Document library sidebar (beyond tabs)
 - [ ] Plugin / extension model (custom renderers, linters)
 - [ ] Collaboration, Git integration (explicitly out of scope for early milestones)
 
